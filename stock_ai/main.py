@@ -2,6 +2,7 @@ from stock_ai.reddit.reddit_scraper import RedditScraper
 from stock_ai.reddit.post_scrape_filter import AfterScrapeFilter
 from dotenv import load_dotenv
 from stock_ai.agents.news_agent import NewsAgent
+from stock_ai.agents.dd_agent import DDAgent
 from openai import OpenAI
 import os
 
@@ -29,17 +30,23 @@ def main():
         print(f"Flair: {flair}, Number of Posts: {len(post_list)}")
         for post in post_list:
             print(f"  - Title: {post.title}, Score: {post.score}, Upvote Ratio: {post.upvote_ratio}")  
-            if flair =="News":
+            if flair =="DD":
                 print(f"    Content: {post.selftext}...")
 
 
     open_ai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     # send news to news agent for stock recommendations
-    news_agent = NewsAgent(open_ai_client)
-    news = filtered_posts["News"]
-    recommendations = news_agent.act(news)
-    print("Stock Recommendations:")
-    print(recommendations.model_dump_json(indent=2))
+    # news_agent = NewsAgent(open_ai_client)
+    # news = filtered_posts["News"]
+    # recommendations = news_agent.act(news)
+    # print("Stock Recommendations:")
+    # print(recommendations.model_dump_json(indent=2))
+    # send DD to DD agent for stock recommendations
+    dd_agent = DDAgent(open_ai_client)
+    dd_posts = filtered_posts["DD"]
+    dd_recommendations = dd_agent.act(dd_posts)
+    print("DD Stock Recommendations:")
+    print(dd_recommendations.model_dump_json(indent=2))
 
 if __name__ == "__main__":
     load_dotenv()
