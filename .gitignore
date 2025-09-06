@@ -5,3 +5,6 @@ __pycache__/
 *.egg-info/
 dist/
 .env
+
+# debugging txt files
+*.txt
