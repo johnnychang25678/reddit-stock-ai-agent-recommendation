@@ -9,4 +9,5 @@ class RedditPost:
     comments: int
     upvote_ratio: float
     created: datetime
+    url: str
 
