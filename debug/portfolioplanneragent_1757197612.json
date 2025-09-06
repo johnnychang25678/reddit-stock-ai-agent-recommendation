@@ -1,0 +1,47 @@
+{
+  "system": "# Role & Objective\n- You are a cautious, compliance-friendly trading planner.\n- You will be given BUY candidates and market snapshots (price, SMAs, ATR, 52w levels, RSI),\n  produce practical trade plans with entries, stops, and take-profits, and a brief rationale.\n\n# Guidelines\n- Aim for risk:reward >= 2.0 on TP1 when feasible.\n- Reasonable entries: pullbacks to SMA20/50, breakouts above recent resistance, or near-range re-tests.\n- Stops: below recent swing low or 1.5-2.5x ATR below entry (whichever is more protective).\n- Take profits: logical resistance zones (recent highs, 52w levels) or multiples of ATR (2x-3x).\n- If data is thin or volatile, widen stops or lower confidence.\n- Time horizon: 20-90 days by default (stretch to 120-180 for slower names).\n- If a name looks overextended (RSI>70) and far above SMAs, suggest pullback entry or skip.\n\n# Agentic Balance:\n        - Proceed autonomously to generate recommendations; in all cases, do not stop to request clarification even if critical decision information is missing. Continue based on the best available data and your established criteria.\n\n",
+  "user": "\n\nMarket snapshots of stock tickers:\n[{\"ticker\": \"HLN\", \"price\": 9.8, \"sma20\": 9.72, \"sma50\": 9.79, \"sma200\": 10.01, \"atr14\": 0.14, \"high_52w\": 11.42, \"low_52w\": 8.86, \"rsi14\": 57.28, \"asof\": \"2025-09-06T22:25:59.823780+00:00\"}, {\"ticker\": \"DELL\", \"price\": 124.83, \"sma20\": 132.08, \"sma50\": 129.38, \"sma200\": 113.22, \"atr14\": 4.43, \"high_52w\": 147.66, \"low_52w\": 66.25, \"rsi14\": 31.99, \"asof\": \"2025-09-06T22:26:00.253167+00:00\"}, {\"ticker\": \"ORCL\", \"price\": 232.8, \"sma20\": 237.94, \"sma50\": 238.53, \"sma200\": 183.15, \"atr14\": 7.41, \"high_52w\": 260.87, \"low_52w\": 118.86, \"rsi14\": 36.22, \"asof\": \"2025-09-06T22:26:00.333800+00:00\"}]",
+  "plans": {
+    "plans": [
+      {
+        "ticker": "HLN",
+        "entry_price": 9.72,
+        "stop_loss": 9.42,
+        "take_profits": [
+          10.32,
+          10.85,
+          11.4
+        ],
+        "time_horizon_days": 60,
+        "risk_reward": 2.0,
+        "rationale": "Buy pullback into SMA20/SMA50 confluence with RSI neutral and price just below the 200-day. Stop is ~2.1x ATR below entry to protect against noise; TP1 targets a push back over the 200-day, with higher targets at logical resistance. Consider moving stop to breakeven after TP1."
+      },
+      {
+        "ticker": "DELL",
+        "entry_price": 122.5,
+        "stop_loss": 115.5,
+        "take_profits": [
+          137.0,
+          142.0,
+          147.5
+        ],
+        "time_horizon_days": 60,
+        "risk_reward": 2.07,
+        "rationale": "Oversold pullback below the 20/50-day but above the 200-day; look to buy near prior support. Stop ~1.6x ATR below entry; TP1 targets a bounce toward the 20/50-day cluster, with extensions toward prior highs for favorable risk/reward."
+      },
+      {
+        "ticker": "ORCL",
+        "entry_price": 229.0,
+        "stop_loss": 217.0,
+        "take_profits": [
+          253.0,
+          258.0,
+          260.9
+        ],
+        "time_horizon_days": 60,
+        "risk_reward": 2.0,
+        "rationale": "Strong primary uptrend (well above 200-day) undergoing a pullback below the 20/50-day; buy a dip toward support. ATR-based stop (~1.6x) limits risk; TP1/TP2/TP3 align with a rebound to the SMA area and a run at the 52-week high."
+      }
+    ]
+  }
+}

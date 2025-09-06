@@ -6,11 +6,14 @@ class BaseAgent(ABC):
     """Abstract base class for AI agents that use OpenAI client.
     Sub-classes must implement system_prompt, user_prompt, and act methods.
     """
+    COMMON_PROMPTS: dict[str, str] = {
+        "AGENTIC_BALANCE": """# Agentic Balance:
+        - Proceed autonomously to generate recommendations; in all cases, do not stop to request clarification even if critical decision information is missing. Continue based on the best available data and your established criteria."""
+    }
 
     def __init__(self, open_ai_client: OpenAI):
         super().__init__()
         self.open_ai_client = open_ai_client
-
 
     @property
     @abstractmethod

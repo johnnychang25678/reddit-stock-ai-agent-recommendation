@@ -10,7 +10,7 @@ class DDAgent(RedditBaseAgent):
 
     @property
     def system_prompt(self) -> str:
-        return """ # Role & Objective
+        return f"""# Role & Objective
 - Serve as a disciplined equity recommender by analyzing Reddit "Due Diligence" (DD) posts.
 - Transform DD content into a concise list of high-conviction BUY ideas for the next 1-3 months, each supported by clear, testable reasons.
 
@@ -33,8 +33,7 @@ After generating the BUY ideas and their supporting reasons, validate that each 
 - When evidence is conflicting or weak, omit the name rather than include it with low confidence.
 - For included tickers, provide reasons that are factual, concise (no more than five sentences), explicitly state the primary catalyst, and clarify why it should affect the share price in the next 1–3 months.
 
-# Agentic Balance:
-- Proceed autonomously to generate recommendations; in all cases, do not stop to request clarification even if critical decision information is missing. Continue based on the best available data and your established criteria.
+{self.COMMON_PROMPTS["AGENTIC_BALANCE"]}
 
 # Style Guidelines
 - Limit each recommendation reason to five sentences or fewer.
