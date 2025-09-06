@@ -1,6 +1,8 @@
 from stock_ai.reddit.reddit_scraper import RedditScraper
 from stock_ai.reddit.post_scrape_filter import AfterScrapeFilter
 from dotenv import load_dotenv
+from stock_ai.agents.news_agent import NewsAgent
+from openai import OpenAI
 import os
 
 def main():
@@ -27,8 +29,17 @@ def main():
         print(f"Flair: {flair}, Number of Posts: {len(post_list)}")
         for post in post_list:
             print(f"  - Title: {post.title}, Score: {post.score}, Upvote Ratio: {post.upvote_ratio}")  
+            if flair =="News":
+                print(f"    Content: {post.selftext}...")
 
 
+    open_ai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    # send news to news agent for stock recommendations
+    news_agent = NewsAgent(open_ai_client)
+    news = filtered_posts["News"]
+    recommendations = news_agent.act(news)
+    print("Stock Recommendations:")
+    print(recommendations.model_dump_json(indent=2))
 
 if __name__ == "__main__":
     load_dotenv()
