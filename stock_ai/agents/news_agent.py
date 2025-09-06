@@ -1,7 +1,6 @@
 from stock_ai.agents.base_agent import BaseAgent
 from openai import OpenAI
 from stock_ai.reddit.types import RedditPost
-from datetime import datetime
 from stock_ai.agents.pydantic_models import StockRecommendations
 import json
 
@@ -48,7 +47,7 @@ class NewsAgent(BaseAgent):
             items.append({
                 "title": p.title,
                 "content": p.selftext,
-                "created_at": p.created.isoformat() if isinstance(p.created, datetime) else str(p.created),
+                "created_at": p.created.isoformat(),
                 "post_url": p.url,
             })
 

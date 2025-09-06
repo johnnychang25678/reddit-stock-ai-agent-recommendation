@@ -48,7 +48,7 @@ After generating the BUY ideas and their supporting reasons, validate that each 
             items.append({
                 "title": p.title,
                 "content": p.selftext,
-                "created_at": p.created.isoformat() if isinstance(p.created, datetime) else str(p.created),
+                "created_at": p.created.isoformat(),
                 "post_url": p.url,
             })
 

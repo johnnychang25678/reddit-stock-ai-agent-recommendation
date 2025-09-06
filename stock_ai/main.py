@@ -3,6 +3,7 @@ from stock_ai.reddit.post_scrape_filter import AfterScrapeFilter
 from dotenv import load_dotenv
 from stock_ai.agents.news_agent import NewsAgent
 from stock_ai.agents.dd_agent import DDAgent
+from stock_ai.agents.yolo_agent import YoloAgent
 from openai import OpenAI
 import os
 
@@ -30,7 +31,7 @@ def main():
         print(f"Flair: {flair}, Number of Posts: {len(post_list)}")
         for post in post_list:
             print(f"  - Title: {post.title}, Score: {post.score}, Upvote Ratio: {post.upvote_ratio}")  
-            if flair =="DD":
+            if flair =="YOLO":
                 print(f"    Content: {post.selftext}...")
 
 
@@ -42,11 +43,18 @@ def main():
     # print("Stock Recommendations:")
     # print(recommendations.model_dump_json(indent=2))
     # send DD to DD agent for stock recommendations
-    dd_agent = DDAgent(open_ai_client)
-    dd_posts = filtered_posts["DD"]
-    dd_recommendations = dd_agent.act(dd_posts)
-    print("DD Stock Recommendations:")
-    print(dd_recommendations.model_dump_json(indent=2))
+    # dd_agent = DDAgent(open_ai_client)
+    # dd_posts = filtered_posts["DD"]
+    # dd_recommendations = dd_agent.act(dd_posts)
+    # print("DD Stock Recommendations:")
+    # print(dd_recommendations.model_dump_json(indent=2))
+
+    # send YOLO to YOLO agent for stock recommendations
+    yolo_agent = YoloAgent(open_ai_client)
+    yolo_posts = filtered_posts["YOLO"]
+    yolo_recommendations = yolo_agent.act(yolo_posts)
+    print("YOLO Stock Recommendations:")
+    print(yolo_recommendations.model_dump_json(indent=2))
 
 if __name__ == "__main__":
     load_dotenv()
