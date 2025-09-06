@@ -1,11 +1,10 @@
-from stock_ai.agents.base_agent import BaseAgent
 from openai import OpenAI
+from stock_ai.agents.reddit_agents.reddit_base_agent import RedditBaseAgent
 from stock_ai.reddit.types import RedditPost
-from stock_ai.agents.pydantic_models import StockRecommendations
 import json
 
 
-class NewsAgent(BaseAgent):
+class NewsAgent(RedditBaseAgent):
     def __init__(self, open_ai_client: OpenAI):
         super().__init__(open_ai_client)
 

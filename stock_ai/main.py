@@ -1,9 +1,9 @@
 from stock_ai.reddit.reddit_scraper import RedditScraper
 from stock_ai.reddit.post_scrape_filter import AfterScrapeFilter
 from dotenv import load_dotenv
-from stock_ai.agents.news_agent import NewsAgent
-from stock_ai.agents.dd_agent import DDAgent
-from stock_ai.agents.yolo_agent import YoloAgent
+from stock_ai.agents.reddit_agents.news_agent import NewsAgent
+from stock_ai.agents.reddit_agents.dd_agent import DDAgent
+from stock_ai.agents.reddit_agents.yolo_agent import YoloAgent
 from openai import OpenAI
 import os
 

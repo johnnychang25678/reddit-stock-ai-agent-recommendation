@@ -1,9 +1,9 @@
 from openai import OpenAI
 from stock_ai.reddit.types import RedditPost
-from stock_ai.agents.base_agent import BaseAgent
+from stock_ai.agents.reddit_agents.reddit_base_agent import RedditBaseAgent
 import json
 
-class YoloAgent(BaseAgent):
+class YoloAgent(RedditBaseAgent):
     def __init__(self, open_ai_client: OpenAI):
         super().__init__(open_ai_client)
 
