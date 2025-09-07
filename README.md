@@ -2,9 +2,16 @@
 
 An AI-powered stock analysis and recommendation system that scrapes Reddit's `r/wallstreetbets`, analyzes posts using AI agents, and generates trading recommendations with technical analysis.
 
-Cron jobs is set up to run the workflow and send results to Discord every week (currently under testing, sending to my personal discord channel). Please be aware - the recommendation is **NOT** a financial advice, use it at your own risk.
+A cron job is set up to run the workflow and send results to Discord every week. Please be aware - the recommendation is **NOT** a financial advice, use it at your own risk.
 
 I am also hoping the workflow engine and AI agent framework can be adapted for other use cases in the future.
+
+## Join the Discord Channel
+If you want to receive the stock recommendations directly, please join my Discord: [https://discord.gg/XxP8z5dxFX](https://discord.gg/XxP8z5dxFX)
+
+It's now still under testing and development, but you can see the recommendations in the `#stock-recommendations` channel.
+
+Feel free to share your feedbacks and suggestions!
 
 ## Overview
 
@@ -31,6 +38,9 @@ Reddit-Posts-Stock-AI-Recommendation-System combines social media sentiment anal
   - Time horizons
 
 - **Discord Integration**: Automatically sends formatted recommendations to Discord channels
+
+Example Discord Output:
+![Discord Output Example](example_discord.png)
 
 ## Architecture
 
