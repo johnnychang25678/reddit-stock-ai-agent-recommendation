@@ -9,8 +9,7 @@ from stock_ai.agents.reddit_agents.yolo_agent import YoloAgent
 from stock_ai.yahoo_finance.yahoo_finance_client import YahooFinanceClient
 from stock_ai.agents.stock_plan_agents.portfolio_planner_agent import PortfolioPlannerAgent
 from stock_ai.workflows.workflow_base import Workflow, Step, Context
-from stock_ai.notifiers.discord.discord_client import DiscordClient
-from stock_ai.notifiers.discord.embed_builder import build_embed
+from stock_ai.notifiers.discord.reddit_stock_notifier import send_stock_recommendations_to_discord
 
 
 def s_openai(ctx: Context) -> Context:
@@ -98,29 +97,8 @@ def s_final_merge(ctx: Context) -> Context:
     return {"final_recommendations": final_recs}
 
 def s_send_to_discord(ctx: Context) -> Context:
-    webhook_url = os.getenv("DISCORD_WEBHOOK_URL_TEST")
-    discord_client = DiscordClient(webhook_url)
-    
-    week_str = time.strftime("%Y-%m-%d", time.localtime(time.time() - 7*24*3600))
-    discord_client.send_message(
-        f"""
-        ## Stock AI Recommendations for week of {week_str}
-
-        ### Legend for Trading Strategy fields:
-
-    - Entry: The price at which the trader enters the position.
-    - Stop: The price at which the trader will exit the position to prevent further losses.
-    - Targets: The prices at which the trader plans to take profits.
-    - Horizon: The time frame for the trade.
-    - R/R: The risk-to-reward ratio of the trade. (e.g., 1.5 means potential reward is 1.5 times the risk taken)
-    """
-    )
-
-    for ticker, info in ctx["final_recommendations"].items():
-        embed = build_embed(ticker, info)
-        discord_client.send_embed(embed)
-        time.sleep(0.5)
-    
+    recs = ctx["final_recommendations"]
+    send_stock_recommendations_to_discord(recs)
     return {}
 
 
