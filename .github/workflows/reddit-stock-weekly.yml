@@ -1,0 +1,47 @@
+name: Reddit stock weekly
+
+on:
+  workflow_dispatch: {}         # allow manual runs
+  schedule:
+    # Run every Sunday at 9am US/Pacific
+    # 16:00 UTC = 9am PDT (Mar–Nov), 17:00 UTC = 9am PST (Nov–Mar)
+    - cron: '0 16 * * SUN'
+    # - cron: '0 17 * * SUN'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reddit-stock-weekly
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+      REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+      REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
+      DISCORD_WEBHOOK_URL_TEST: ${{ secrets.DISCORD_WEBHOOK_URL_TEST }}
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Sync deps
+        # Works with pyproject.toml / uv.lock; remove --all-extras if unused
+        run: uv sync --all-extras
+
+      - name: Run weekly workflow
+        run: |
+            uv run -m stock_ai.main
