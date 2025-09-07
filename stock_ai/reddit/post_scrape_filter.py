@@ -1,5 +1,6 @@
 from stock_ai.reddit.reddit_scraper import RedditPost
 import statistics
+from collections import Counter
 
 class AfterScrapeFilter:
     def _get_quantiles(self, data:list[float]) -> list[float]:
@@ -46,8 +47,8 @@ class AfterScrapeFilter:
                 elif flair == "YOLO":
                     if post.score >= q3_score and post.upvote_ratio >= q3_upvote_ratio:
                         filtered[flair].append(post)
-
-        print(f"After filtering, total posts: {sum(len(v) for v in filtered.values())}")
+        # count by flair
+        print(f"After filtering, posts: {Counter({k: len(v) for k, v in filtered.items()})}")
         return filtered
 
 
