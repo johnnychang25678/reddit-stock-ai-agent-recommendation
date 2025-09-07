@@ -74,6 +74,21 @@ def a_plan(ctx: Context) -> Context:
     portfolio = planner.act(ctx["snapshots"])
     return {"portfolio": portfolio}
 
+def s_final_merge(ctx: Context) -> Context:
+    # combine everything into final recommendations by ticker
+    final_recs = {}
+    for ticker in ctx["tickers"]:
+        snapshot = [s for s in ctx["snapshots"] if s.ticker == ticker]
+        if snapshot and snapshot[0].error:
+            continue
+        final_recs[ticker] = {
+            "stock_recommendations": ctx["merged_recs"].get(ticker).model_dump_json() 
+            if ctx["merged_recs"].get(ticker) else None,
+            "snapshot": snapshot[0].__dict__ if snapshot else None,
+            "portfolio": [p.model_dump_json() for p in ctx["portfolio"].plans if p.ticker == ticker],
+        }
+    return {"final_recommendations": final_recs}
+
 
 reddit_stock_workflow = Workflow(steps=[
     Step("init_openai", [s_openai]),
@@ -83,4 +98,5 @@ reddit_stock_workflow = Workflow(steps=[
     Step("merge all recommendations", [s_merge]),
     Step("fetch yf snapshots", [s_snapshots]),
     Step("run planner agent", [a_plan]),
+    Step("final merge", [s_final_merge]),
 ])

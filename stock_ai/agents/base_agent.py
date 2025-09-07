@@ -8,7 +8,7 @@ class BaseAgent(ABC):
     """
     COMMON_PROMPTS: dict[str, str] = {
         "AGENTIC_BALANCE": """# Agentic Balance:
-        - Proceed autonomously to generate recommendations; in all cases, do not stop to request clarification even if critical decision information is missing. Continue based on the best available data and your established criteria."""
+- Proceed autonomously to generate recommendations; in all cases, do not stop to request clarification even if critical decision information is missing. Continue based on the best available data and your established criteria."""
     }
 
     def __init__(self, open_ai_client: OpenAI):
