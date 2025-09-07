@@ -45,3 +45,9 @@ jobs:
       - name: Run weekly workflow
         run: |
             uv run -m stock_ai.main
+
+      - name: Upload debug results
+        uses: actions/upload-artifact@v4
+        with:
+            name: final-recs
+            path: debug/result/*.json

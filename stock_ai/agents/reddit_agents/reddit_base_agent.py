@@ -31,19 +31,19 @@ class RedditBaseAgent(BaseAgent):
         result = resp.output_parsed
 
         # write system promt, user prompt, and response to a single file for debugging
-        os.makedirs("debug", exist_ok=True)
-        with open(f"debug/{agent_cls_name.lower()}_debug_{int(time.time())}.txt", "w", encoding="utf-8") as f:
-            f.write("SYSTEM PROMPT:\n")
-            f.write(self.system_prompt)
-            f.write("\n\nUSER PROMPT:\n")
-            f.write(user_prompt)
-            f.write("\n\nRESPONSE:\n")
-            # Convert Pydantic model to dict for JSON serialization
-            result_dict = result.model_dump() if hasattr(result, "model_dump") else result.dict()
-            f.write(json.dumps(result_dict, ensure_ascii=False, indent=2))
+        # os.makedirs("debug", exist_ok=True)
+        # with open(f"debug/{agent_cls_name.lower()}_debug_{int(time.time())}.txt", "w", encoding="utf-8") as f:
+        #     f.write("SYSTEM PROMPT:\n")
+        #     f.write(self.system_prompt)
+        #     f.write("\n\nUSER PROMPT:\n")
+        #     f.write(user_prompt)
+        #     f.write("\n\nRESPONSE:\n")
+        #     # Convert Pydantic model to dict for JSON serialization
+        #     result_dict = result.model_dump() if hasattr(result, "model_dump") else result.dict()
+        #     f.write(json.dumps(result_dict, ensure_ascii=False, indent=2))
 
-            # write raw response
-            f.write("\n\nRAW RESPONSE:\n")
-            f.write(str(resp))
+        #     # write raw response
+        #     f.write("\n\nRAW RESPONSE:\n")
+        #     f.write(str(resp))
 
-        return resp.output_parsed
+        return result
