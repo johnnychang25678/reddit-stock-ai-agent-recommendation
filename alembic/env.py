@@ -1,10 +1,17 @@
 from logging.config import fileConfig
+from typing import Any
+from dotenv import load_dotenv
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-from stock_ai.db.db import Base
+from stock_ai.db.base import Base
+import stock_ai.db.models
+
+import os
+
+load_dotenv()  # take environment variables from .env
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -26,6 +33,48 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+def _get_database_url() -> str:
+    target = os.getenv("DB_TARGET", "LOCAL").upper()
+    if target == "REMOTE":
+        url = os.getenv("DATABASE_URL_REMOTE")
+    else:
+        url = os.getenv("DATABASE_URL_LOCAL")
+
+    if not url:
+        # Fallback to alembic.ini if nothing in .env
+        url = config.get_main_option("sqlalchemy.url")
+
+    if not url:
+        raise RuntimeError(
+            "No database URL found. Set DATABASE_URL_LOCAL/REMOTE in .env or sqlalchemy.url in alembic.ini"
+        )
+    return url
+
+
+
+# ---- Exclude Supabase-managed schemas from autogenerate ----
+# These schemas are owned by Supabase.
+_SKIP_SCHEMAS = {
+    "auth",
+    "storage",
+    "realtime",
+    "pgbouncer",
+    "pg_catalog",
+    "information_schema",
+    "extensions",
+    "supabase_functions",
+    "supabase_migrations",
+}
+
+
+def include_object(
+    obj: Any, name: str, type_: str, reflected: bool, compare_to: Any
+) -> bool:
+    schema = getattr(obj, "schema", None)
+    if schema in _SKIP_SCHEMAS:
+        return False
+    return True
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -39,10 +88,11 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=_get_database_url(),
         target_metadata=target_metadata,
+        include_object=include_object,
+        compare_server_default=True,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -58,22 +108,28 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # Inject URL into alembic config at runtime
+    section = config.get_section(config.config_ini_section) or {}
+    section["sqlalchemy.url"] = _get_database_url()
+
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_object,
+            compare_server_default=True,
         )
-
         with context.begin_transaction():
             context.run_migrations()
-
 
 if context.is_offline_mode():
     run_migrations_offline()
 else:
+    # alembic default is online mode (writes to DB directly)
     run_migrations_online()

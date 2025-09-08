@@ -9,11 +9,12 @@ import time
 #     send_stock_recommendations_to_discord(rec)
 
 def main():
-    s = time.perf_counter()
-    res = reddit_stock_workflow.run()
-    e = time.perf_counter()
-    print(f"Workflow completed in {e - s:.2f} seconds.")
-    print(res["final_recommendations"])
+    # s = time.perf_counter()
+    # res = reddit_stock_workflow.run()
+    # e = time.perf_counter()
+    # print(f"Workflow completed in {e - s:.2f} seconds.")
+    # print(res["final_recommendations"])
+    pass
 
 
 if __name__ == "__main__":

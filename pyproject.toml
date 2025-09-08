@@ -8,6 +8,7 @@ dependencies = [
     "alembic>=1.16.5",
     "openai>=1.106.1",
     "praw>=7.8.1",
+    "psycopg2>=2.9.10",
     "python-dotenv>=1.1.1",
     "sqlalchemy>=2.0.43",
     "yfinance>=0.2.65",
