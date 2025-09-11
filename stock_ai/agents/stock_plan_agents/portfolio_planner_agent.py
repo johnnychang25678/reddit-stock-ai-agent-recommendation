@@ -68,8 +68,11 @@ class PortfolioPlannerAgent(BaseAgent):
         print(f"{agent_cls} completed in {end - start:.2f}s")
 
         # Debug
+        result = resp.output_parsed
+        if not result:
+            raise ValueError(f"{agent_cls} result failed to parse")
         os.makedirs("debug", exist_ok=True)
-        dump = resp.output_parsed.model_dump()
+        dump = result.model_dump()
         with open(f"debug/{agent_cls.lower()}_{int(time.time())}.json","w",encoding="utf-8") as f:
             json.dump({
                 "system": self.system_prompt,
@@ -77,4 +80,4 @@ class PortfolioPlannerAgent(BaseAgent):
                 "plans": dump
             }, f, ensure_ascii=False, indent=2)
 
-        return resp.output_parsed
+        return result

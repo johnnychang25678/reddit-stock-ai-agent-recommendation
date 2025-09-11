@@ -6,7 +6,10 @@ import os
 from textwrap import dedent
 
 def send_stock_recommendations_to_discord(rec: dict):
-    webhook_url = os.getenv("DISCORD_WEBHOOK_URL_TEST")
+    webhook_url = os.getenv("DISCORD_WEBHOOK_URL_TEST", "")
+    if not webhook_url:
+        print("DISCORD_WEBHOOK_URL_TEST not set, skipping Discord notification")
+        return
     discord_client = DiscordClient(webhook_url)
     week_str = time.strftime("%Y-%m-%d", time.localtime(time.time() - 7*24*3600))
     content = dedent(f"""

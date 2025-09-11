@@ -43,8 +43,7 @@ def _color_for_conf(conf: str | None) -> int:
 
 def build_embed(ticker: str, info: dict) -> dict:
     rec = _json_or_none(info.get("stock_recommendations"))
-    snap_list = info.get("snapshot") or []
-    snap = snap_list[0] if isinstance(snap_list, list) and len(snap_list) > 0 else snap_list # should be a dict after I fix it
+    snap = info.get("snapshot") or {}
     plans_raw = info.get("portfolio") or []
     plan = next((p for p in ([_json_or_none(x) for x in plans_raw]) if p), None)
 
