@@ -24,11 +24,13 @@ class RedditBaseAgent(BaseAgent):
             reasoning={"effort": "medium"},
         )
         end = time.perf_counter()
-        print(f"NewsAgent act() completed in {end - start:.2f} seconds.")
+        print(f"{agent_cls_name} act() completed in {end - start:.2f} seconds.")
 
-        print("Raw response:", resp)
+        # print("Raw response:", resp)
 
         result = resp.output_parsed
+        if not result:
+            raise ValueError(f"{agent_cls_name} result failed to parse")
 
         # write system promt, user prompt, and response to a single file for debugging
         # os.makedirs("debug", exist_ok=True)

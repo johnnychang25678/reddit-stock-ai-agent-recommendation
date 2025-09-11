@@ -9,6 +9,10 @@ class InMemoryPersistence(Persistence):
         self._d: dict[str, Any] = {}
         # use reentrant lock to allow same thread to re-acquire lock
         self._lock = threading.RLock()
+    
+    def __repr__(self) -> str:
+        with self._lock: 
+            return self._d.keys().__repr__()
 
     def get(self, key: str, default: Any = None) -> Any:
         with self._lock: return self._d.get(key, default)

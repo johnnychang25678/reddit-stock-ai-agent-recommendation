@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
-from stock_ai.workflows.reddit_stock_workflow import reddit_stock_workflow
+from stock_ai.workflows.persistence.in_memory import InMemoryPersistence
+from stock_ai.workflows.reddit_stock_workflow import init_workflow
 import time
 # import os
 # import json
@@ -9,11 +10,11 @@ import time
 #     send_stock_recommendations_to_discord(rec)
 
 def main():
-    # s = time.perf_counter()
-    # res = reddit_stock_workflow.run()
-    # e = time.perf_counter()
-    # print(f"Workflow completed in {e - s:.2f} seconds.")
-    # print(res["final_recommendations"])
+    s = time.perf_counter()
+    persistence = InMemoryPersistence()
+    res = init_workflow("my_run_id", persistence).run()
+    e = time.perf_counter()
+    print(f"Workflow completed in {e - s:.2f} seconds.")
     pass
 
 

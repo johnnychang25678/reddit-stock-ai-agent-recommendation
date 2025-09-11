@@ -2,12 +2,10 @@ from dataclasses import dataclass
 import concurrent.futures as cf
 from typing import Any
 from collections.abc import Callable
+from stock_ai.workflows.persistence.base_persistence import Persistence
 
-# Context is a dictionary that holds data passed between steps
-# each step function takes in a Context and returns a Context
-# Context should be immutable, so each function returns a new Context
-Context = dict[str, Any]
-StepFn = Callable[[Context], Context]
+# params: persistence, run_id
+StepFn = Callable[[Persistence, str], Any]
 
 @dataclass
 class Step:
@@ -16,24 +14,20 @@ class Step:
 
 
 class Workflow:
-    def __init__(self, steps: list[Step]):
+    def __init__(self, run_id:str, steps: list[Step], persistence: Persistence):
+        self.run_id = run_id
         self.steps = steps
+        self.persistence = persistence
 
-    def run(self, initial_context: Context | None = None) -> Context:
-        context = initial_context or {}
-        # run act step serially
+    def run(self):
+        # run each step serially
         for step in self.steps:
             print(f"Running step: {step.name}")
-            print(f"Current context keys: {list(context.keys())}")
             if len(step.functions) > 1:
                 # run in parallel
                 with cf.ThreadPoolExecutor(max_workers=len(step.functions) + 1) as ex:
-                    futures = [ex.submit(func, context) for func in step.functions]
+                    futures = [ex.submit(func, self.persistence, self.run_id) for func in step.functions]
                     for future in cf.as_completed(futures):
-                        result = future.result()
-                        context.update(result)
+                        future.result()
             else:
-                result = step.functions[0](context)
-                context.update(result)
-
-        return context
+                step.functions[0](self.persistence, self.run_id)
