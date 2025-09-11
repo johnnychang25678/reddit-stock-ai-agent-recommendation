@@ -21,7 +21,7 @@ class RedditScraper:
 
     def scrape(self, 
                subreddit_name:str,
-               flairs_want:set[str]=None,
+               flairs_want:set[str] | None =None,
                skip_empty_selftext:bool=True,
                cut_off_days=7, 
                limit=1000) -> dict[str, list[RedditPost]]:
@@ -37,7 +37,7 @@ class RedditScraper:
         """
         print(f"Scraping r/{subreddit_name} for posts with flairs {flairs_want}, skipping empty selftext: {skip_empty_selftext}, cut off days: {cut_off_days}, limit: {limit}")
         posts = self._get_subreddit_posts(subreddit_name, limit=limit)
-        collect:dict[str, list[dict[str, Any]]] = {}
+        collect:dict[str, list[RedditPost]] = {}
         cutoff = datetime.now(timezone.utc) - timedelta(days=cut_off_days)
 
         for post in posts:
