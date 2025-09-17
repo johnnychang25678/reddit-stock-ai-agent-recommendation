@@ -3,7 +3,7 @@ import statistics
 from collections import Counter
 
 class AfterScrapeFilter:
-    def _get_quantiles(self, data:list[float]) -> list[float]:
+    def _get_quantiles(self, data:list[int] | list[float]) -> list[float]:
         if not data:
             return [0.0, 0.0, 0.0]
         if len(data) < 2:

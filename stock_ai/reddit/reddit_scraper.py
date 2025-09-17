@@ -33,7 +33,7 @@ class RedditScraper:
         :param cut_off_days: Only includes posts from the last 'cut_off_days' days.
         :param limit: Maximum number of posts to fetch.
 
-        :returns: Dictionary mapping flairs to lists of RedditPost objects.
+        :returns: dict flair -> [RedditPost]
         """
         print(f"Scraping r/{subreddit_name} for posts with flairs {flairs_want}, skipping empty selftext: {skip_empty_selftext}, cut off days: {cut_off_days}, limit: {limit}")
         posts = self._get_subreddit_posts(subreddit_name, limit=limit)
@@ -53,24 +53,15 @@ class RedditScraper:
             if skip_empty_selftext and len(post.selftext) == 0:
                 continue
 
-            # print("====================================")
-            # print("FLAIR:", flair)
-            # print({
-            #     "title": post.title,
-            #     "score": post.score,            # net upvotes
-            #     "comments": post.num_comments,  # total comments
-            #     "upvote_ratio": post.upvote_ratio,
-            #     "created": datetime.fromtimestamp(post.created_utc),
-            # })
-
             if flair not in collect:
                 collect[flair] = []
 
             reddit_post = RedditPost(
+                id=post.id,
                 title=post.title,
                 selftext=post.selftext,
                 score=post.score,
-                comments=post.num_comments,
+                num_comments=post.num_comments,
                 upvote_ratio=post.upvote_ratio,
                 created=datetime.fromtimestamp(post.created_utc),
                 url=post.url
