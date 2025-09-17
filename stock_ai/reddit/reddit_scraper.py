@@ -58,6 +58,7 @@ class RedditScraper:
 
             reddit_post = RedditPost(
                 id=post.id,
+                flair=flair,
                 title=post.title,
                 selftext=post.selftext,
                 score=post.score,
