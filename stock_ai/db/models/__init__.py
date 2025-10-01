@@ -1,3 +1,4 @@
+from stock_ai.db.models.run_metadata import RunMetaData
 from stock_ai.db.models.reddit_post import RedditPost
 from stock_ai.db.models.reddit_filterd_post import RedditFilteredPost
 from stock_ai.db.models.dd_recommendation import DdRecommendation

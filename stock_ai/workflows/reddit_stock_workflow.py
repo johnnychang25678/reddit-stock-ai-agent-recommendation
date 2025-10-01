@@ -25,6 +25,15 @@ def _idempotency_check(persistence: Persistence, run_id: str, table: str) -> boo
     # will return a list of rows if any exist with this run_id
     return (existing is not None) and (isinstance(existing, list) and len(existing) > 0)
 
+def s_insert_run_metadata(persistence: Persistence, run_id: str) -> None:
+    if _idempotency_check(persistence, run_id, "run_metadata"):
+        print(f"Run metadata already exists for run_id {run_id}, skipping insert step")
+        return
+    row = {
+        "run_id": run_id,
+    }
+    persistence.set("run_metadata", [row])
+
 def s_scrape(persistence: Persistence, run_id: str) -> None:
     if _idempotency_check(persistence, run_id, "reddit_posts"):
         print(f"Posts already scraped for run_id {run_id}, skipping scrape step")
@@ -233,6 +242,7 @@ def init_workflow(run_id: str, persistence: Persistence) -> Workflow:
         run_id=run_id,
         persistence=persistence,
         steps=[
+            Step("insert run metadata", [s_insert_run_metadata]),
             Step("scrape reddit", [s_scrape]),
             Step("filter posts", [s_filter]),
             Step("run reddit agents", [a_news, a_dd, a_yolo]),

@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import time
 
 from stock_ai.db.models import (
-    RedditPost, RedditFilteredPost, DdRecommendation, YoloRecommendation, 
+    RedditPost, RedditFilteredPost, DdRecommendation, YoloRecommendation, RunMetaData,
     NewsRecommendation, FinancialSnapshot, PortfolioPlan)
 from stock_ai.workflows.persistence.sql_alchemy_persistence import SqlAlchemyPersistence
 from stock_ai.workflows.reddit_stock_workflow import init_workflow
@@ -13,6 +13,7 @@ def main():
     init_db()
     persistence = SqlAlchemyPersistence(
         registry={
+            "run_metadata": RunMetaData,
             "reddit_posts": RedditPost,
             "reddit_filtered_posts": RedditFilteredPost,
             "news_recommendations": NewsRecommendation,
