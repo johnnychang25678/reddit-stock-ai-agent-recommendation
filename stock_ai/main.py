@@ -23,7 +23,7 @@ def main():
             "portfolio_plans": PortfolioPlan,
         },
     )
-    run_id = "my_run_id"
+    run_id = time.strftime("%Y%m%d")
     init_workflow(run_id, persistence).run()
     e = time.perf_counter()
     print(f"Workflow completed in {e - s:.2f} seconds.")

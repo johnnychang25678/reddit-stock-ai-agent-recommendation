@@ -18,6 +18,8 @@ def _get_engine():
             database_url = os.getenv("DATABASE_URL_LOCAL")
         elif db_target == "REMOTE":
             database_url = os.getenv("DATABASE_URL_REMOTE")
+        elif db_target == "REMOTE_GH_WORKER":
+            database_url = os.getenv("DATABASE_URL_REMOTE_GH_WORKER")
         
         if not database_url:
             raise ValueError("DATABASE_URL environment variable is required")
