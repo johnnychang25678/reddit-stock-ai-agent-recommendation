@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import stock_ai.agents.stock_plan_agents.pydantic_models
+import stock_ai.db.models.portfolio_plan
 
 @dataclass
 class TradePlan:
@@ -21,4 +22,16 @@ class TradePlan:
             time_horizon_days=pydantic_obj.time_horizon_days,
             risk_reward=pydantic_obj.risk_reward,
             rationale=pydantic_obj.rationale,
+        )
+
+    @classmethod
+    def from_orm(cls, orm_obj: "stock_ai.db.models.portfolio_plan.PortfolioPlan") -> "TradePlan":
+        return cls(
+            ticker=orm_obj.ticker,
+            entry_price=orm_obj.entry_price,
+            stop_loss=orm_obj.stop_loss,
+            take_profits=orm_obj.take_profits,
+            time_horizon_days=orm_obj.time_horizon_days,
+            risk_reward=orm_obj.risk_reward,
+            rationale=orm_obj.rationale,
         )

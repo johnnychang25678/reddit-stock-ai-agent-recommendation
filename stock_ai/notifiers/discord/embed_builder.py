@@ -42,10 +42,9 @@ def _color_for_conf(conf: str | None) -> int:
     return table.get((conf or "").lower(), 0x7289DA)
 
 def build_embed(ticker: str, info: dict) -> dict:
-    rec = _json_or_none(info.get("stock_recommendations"))
+    rec = info.get("stock_recommendations") or {}
     snap = info.get("snapshot") or {}
-    plans_raw = info.get("portfolio") or []
-    plan = next((p for p in ([_json_or_none(x) for x in plans_raw]) if p), None)
+    plan = info.get("portfolio") or {}
 
     # ----- top: TRADING PLAN (prominent, first) -----
     if plan:
