@@ -6,6 +6,7 @@ from stock_ai.agents.reddit_agents.data_classes import StockRecommendation
 from stock_ai.agents.reddit_agents.news_agent import NewsAgent
 from stock_ai.agents.reddit_agents.dd_agent import DDAgent
 from stock_ai.agents.reddit_agents.yolo_agent import YoloAgent
+from stock_ai.workflows.persistence.sql_alchemy_persistence import SqlAlchemyPersistence
 from stock_ai.yahoo_finance.types import StockSnapshot
 from stock_ai.yahoo_finance.yahoo_finance_client import YahooFinanceClient
 from stock_ai.agents.stock_plan_agents.portfolio_planner_agent import PortfolioPlannerAgent
@@ -15,7 +16,7 @@ from stock_ai.notifiers.discord.reddit_stock_notifier import send_stock_recommen
 from stock_ai.workflows.common.api_clients import get_openai_client, get_reddit_scraper
 
 
-def _idempotency_check(persistence: Persistence, run_id: str, table: str) -> bool:
+def _idempotency_check(persistence: SqlAlchemyPersistence, run_id: str, table: str) -> bool:
     if run_id.startswith("no-idempotency-"):
         # disable idempotency check
         print("skip idempotency check...")
@@ -25,7 +26,7 @@ def _idempotency_check(persistence: Persistence, run_id: str, table: str) -> boo
     # will return a list of rows if any exist with this run_id
     return (existing is not None) and (isinstance(existing, list) and len(existing) > 0)
 
-def s_insert_run_metadata(persistence: Persistence, run_id: str) -> None:
+def s_insert_run_metadata(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     if _idempotency_check(persistence, run_id, "run_metadata"):
         print(f"Run metadata already exists for run_id {run_id}, skipping insert step")
         return
@@ -34,7 +35,7 @@ def s_insert_run_metadata(persistence: Persistence, run_id: str) -> None:
     }
     persistence.set("run_metadata", [row])
 
-def s_scrape(persistence: Persistence, run_id: str) -> None:
+def s_scrape(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     if _idempotency_check(persistence, run_id, "reddit_posts"):
         print(f"Posts already scraped for run_id {run_id}, skipping scrape step")
         return
@@ -58,7 +59,7 @@ def s_scrape(persistence: Persistence, run_id: str) -> None:
 
     persistence.set("reddit_posts", rows)
 
-def s_filter(persistence: Persistence, run_id: str) -> None:
+def s_filter(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     if _idempotency_check(persistence, run_id, "reddit_filtered_posts"):
         print(f"Posts already filtered for run_id {run_id}, skipping filter step")
         return
@@ -92,7 +93,7 @@ def _filter_posts_by_flair(posts: list, flair: str) -> list[RedditPost]:
     return posts_for_agent
 
 
-def a_news(persistence: Persistence, run_id: str) -> None:
+def a_news(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     if _idempotency_check(persistence, run_id, "news_recommendations"):
         print(f"News recommendations already generated for run_id {run_id}, skipping news agent step")
         return
@@ -112,7 +113,7 @@ def a_news(persistence: Persistence, run_id: str) -> None:
 
     persistence.set("news_recommendations", rows)
 
-def a_dd(persistence: Persistence, run_id: str) -> None:
+def a_dd(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     if _idempotency_check(persistence, run_id, "dd_recommendations"):
         print(f"DD recommendations already generated for run_id {run_id}, skipping DD agent step")
         return
@@ -132,7 +133,7 @@ def a_dd(persistence: Persistence, run_id: str) -> None:
 
     persistence.set("dd_recommendations", rows)
 
-def a_yolo(persistence: Persistence, run_id: str) -> None:
+def a_yolo(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     if _idempotency_check(persistence, run_id, "yolo_recommendations"):
         print(f"YOLO recommendations already generated for run_id {run_id}, skipping YOLO agent step")
         return
@@ -152,7 +153,7 @@ def a_yolo(persistence: Persistence, run_id: str) -> None:
 
     persistence.set("yolo_recommendations", rows)
 
-def s_snapshots(persistence: Persistence, run_id: str) -> None:
+def s_snapshots(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     if _idempotency_check(persistence, run_id, "financial_snapshots"):
         print(f"Snapshots already fetched for run_id {run_id}, skipping financial snapshots step")
         return
@@ -175,7 +176,7 @@ def s_snapshots(persistence: Persistence, run_id: str) -> None:
 
     persistence.set("financial_snapshots", rows)
 
-def a_plan(persistence: Persistence, run_id: str) -> None:
+def a_plan(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     if _idempotency_check(persistence, run_id, "portfolio_plans"):
         print(f"Portfolio already planned for run_id {run_id}, skipping planner step")
         return
@@ -195,7 +196,7 @@ def a_plan(persistence: Persistence, run_id: str) -> None:
 
     persistence.set("portfolio_plans", rows)
 
-def s_merge_and_notify_discord(persistence: Persistence, run_id: str) -> None:
+def s_merge_and_notify_discord(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     print("************ Final merge step ************")
     # combine everything into final recommendations by ticker
     final_recs = {}
@@ -237,7 +238,7 @@ def s_merge_and_notify_discord(persistence: Persistence, run_id: str) -> None:
     # send to discord
     send_stock_recommendations_to_discord(final_recs)
 
-def init_workflow(run_id: str, persistence: Persistence) -> Workflow:
+def init_workflow(run_id: str, persistence: SqlAlchemyPersistence) -> Workflow:
     reddit_stock_workflow = Workflow(
         run_id=run_id,
         persistence=persistence,

@@ -3,9 +3,10 @@ from sqlalchemy import select, insert
 
 from stock_ai.db.session import get_session
 from stock_ai.db.base import Base
+from stock_ai.workflows.persistence.base_persistence import Persistence
 
 
-class SqlAlchemyPersistence:
+class SqlAlchemyPersistence(Persistence):
     """
     Multi-table SQL persistence using a registry of table bindings.
 
@@ -69,3 +70,6 @@ class SqlAlchemyPersistence:
     def update(self, mapping: Mapping[str, Any]) -> None:
         # No use cases for now.
         pass
+
+    def hello(self) -> str:
+        return "Hello from SqlAlchemyPersistence"

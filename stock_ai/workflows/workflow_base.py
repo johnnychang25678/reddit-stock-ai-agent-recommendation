@@ -1,11 +1,16 @@
 from dataclasses import dataclass
 import concurrent.futures as cf
-from typing import Any
+from typing import Any, TypeVar
 from collections.abc import Callable
 from stock_ai.workflows.persistence.base_persistence import Persistence
 
+
+# This constrains P so that it must be either Persistence itself or a subclass of Persistence.
+# In other words: "P can only be something that implements the Persistence interface."
+P = TypeVar("P", bound=Persistence)
+
 # params: persistence, run_id
-StepFn = Callable[[Persistence, str], Any]
+StepFn = Callable[[P, str], Any]
 
 @dataclass
 class Step:
