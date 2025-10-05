@@ -20,7 +20,7 @@ class SqlAlchemyPersistence(Persistence):
         self._registry = dict(registry)
 
 
-    def get(self, table: str, default: Any = None, **filters) -> Any:
+    def get(self, table: str, **filters) -> Any:
         """
         SELECT * FROM table [with simple filters in **filters].
         """
@@ -37,7 +37,7 @@ class SqlAlchemyPersistence(Persistence):
                 # this chain adds AND conditions
                 stmt = stmt.where(col == v)
 
-            return list(s.scalars(stmt).all()) or default
+            return list(s.scalars(stmt).all())
 
     def set(self, table: str, rows: list[dict]) -> None:
         """

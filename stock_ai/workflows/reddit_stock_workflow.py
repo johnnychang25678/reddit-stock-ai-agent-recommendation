@@ -15,23 +15,14 @@ from stock_ai.workflows.persistence.base_persistence import Persistence
 from stock_ai.notifiers.discord.reddit_stock_notifier import send_stock_recommendations_to_discord
 from stock_ai.workflows.common.api_clients import get_openai_client, get_reddit_scraper
 
-from sqlalchemy.inspection import inspect
-
 
 def _idempotency_check(persistence: SqlAlchemyPersistence, run_id: str, table: str) -> bool:
-    def row_to_dict(row):
-        """Convert a SQLAlchemy ORM row to dict (columns only)."""
-        return {c.key: getattr(row, c.key) for c in inspect(row).mapper.column_attrs}
-
     if run_id.startswith("no-idempotency-"):
         # disable idempotency check
         print("skip idempotency check...")
         return False
     print(f"Checking if {table} already exists for run_id {run_id}...")
-    existing = persistence.get(table, {"run_id": run_id})
-    if isinstance(existing, list):
-        for row in existing:
-            print(row_to_dict(row))
+    existing = persistence.get(table, run_id=run_id)
     # will return a list of rows if any exist with this run_id
     return (existing is not None) and (isinstance(existing, list) and len(existing) > 0)
 
@@ -73,7 +64,7 @@ def s_filter(persistence: SqlAlchemyPersistence, run_id: str) -> None:
         print(f"Posts already filtered for run_id {run_id}, skipping filter step")
         return
 
-    posts = persistence.get("reddit_posts", {"run_id": run_id})
+    posts = persistence.get("reddit_posts", run_id=run_id)
     # convert to list[RedditPostORMModel] to dict flair -> list[RedditPost]
     posts_dict:dict[str, list] = {}
     for p in posts:
@@ -108,7 +99,7 @@ def a_news(persistence: SqlAlchemyPersistence, run_id: str) -> None:
         return
     openai = get_openai_client()
     agent = NewsAgent(openai)
-    filtered_posts = persistence.get("reddit_filtered_posts", {"run_id": run_id})
+    filtered_posts = persistence.get("reddit_filtered_posts", run_id=run_id)
     # filtered out flair = flair
     posts_for_agent = _filter_posts_by_flair(filtered_posts, "News")
     recs = agent.act(posts_for_agent)
@@ -128,7 +119,7 @@ def a_dd(persistence: SqlAlchemyPersistence, run_id: str) -> None:
         return
     openai = get_openai_client()
     agent = DDAgent(openai)
-    filtered_posts = persistence.get("reddit_filtered_posts", {"run_id": run_id})
+    filtered_posts = persistence.get("reddit_filtered_posts", run_id=run_id)
     posts_for_agent = _filter_posts_by_flair(filtered_posts, "DD")
 
     recs = agent.act(posts_for_agent)
@@ -148,7 +139,7 @@ def a_yolo(persistence: SqlAlchemyPersistence, run_id: str) -> None:
         return
     openai = get_openai_client()
     agent = YoloAgent(openai)
-    filtered_posts = persistence.get("reddit_filtered_posts", {"run_id": run_id})
+    filtered_posts = persistence.get("reddit_filtered_posts", run_id=run_id)
     posts_for_agent = _filter_posts_by_flair(filtered_posts, "YOLO")
 
     recs = agent.act(posts_for_agent)
@@ -167,9 +158,9 @@ def s_snapshots(persistence: SqlAlchemyPersistence, run_id: str) -> None:
         print(f"Snapshots already fetched for run_id {run_id}, skipping financial snapshots step")
         return
     yf = YahooFinanceClient()
-    news_recs = persistence.get("news_recommendations", {"run_id": run_id})
-    dd_recs = persistence.get("dd_recommendations", {"run_id": run_id})
-    yolo_recs = persistence.get("yolo_recommendations", {"run_id": run_id})
+    news_recs = persistence.get("news_recommendations", run_id=run_id)
+    dd_recs = persistence.get("dd_recommendations", run_id=run_id)
+    yolo_recs = persistence.get("yolo_recommendations", run_id=run_id)
     tickers = set()
     for rec in news_recs + dd_recs + yolo_recs:
         tickers.add(rec.ticker)
@@ -191,7 +182,7 @@ def a_plan(persistence: SqlAlchemyPersistence, run_id: str) -> None:
         return
     openai = get_openai_client()
     planner = PortfolioPlannerAgent(openai)
-    snapshots = persistence.get("financial_snapshots", {"run_id": run_id})
+    snapshots = persistence.get("financial_snapshots", run_id=run_id)
     snapshots_dc = [StockSnapshot.from_orm(s) for s in snapshots]
     portfolio = planner.act(snapshots_dc)
 
@@ -209,26 +200,26 @@ def s_merge_and_notify_discord(persistence: SqlAlchemyPersistence, run_id: str) 
     print("************ Final merge step ************")
     # combine everything into final recommendations by ticker
     final_recs = {}
-    portfolio_plans = persistence.get("portfolio_plans", {"run_id": run_id})
+    portfolio_plans = persistence.get("portfolio_plans", run_id=run_id)
 
-    snapshots = persistence.get("financial_snapshots", {"run_id": run_id})
+    snapshots = persistence.get("financial_snapshots", run_id=run_id)
     snapshot_dc_dict = {}
     for s in snapshots:
         snapshot_dc = StockSnapshot.from_orm(s)
         snapshot_dc_dict[snapshot_dc.ticker] = snapshot_dc
 
-    news_recs = persistence.get("news_recommendations", {"run_id": run_id})
+    news_recs = persistence.get("news_recommendations", run_id=run_id)
     recs_dc_dict = {}
     for n in news_recs:
         n_dc = StockRecommendation.from_orm(n)
         recs_dc_dict[n_dc.ticker] = n_dc
 
-    dd_recs = persistence.get("dd_recommendations", {"run_id": run_id})
+    dd_recs = persistence.get("dd_recommendations", run_id=run_id)
     for d in dd_recs:
         d_dc = StockRecommendation.from_orm(d)
         recs_dc_dict[d_dc.ticker] = d_dc
 
-    yolo_recs = persistence.get("yolo_recommendations", {"run_id": run_id})
+    yolo_recs = persistence.get("yolo_recommendations", run_id=run_id)
     for y in yolo_recs:
         y_dc = StockRecommendation.from_orm(y)
         recs_dc_dict[y_dc.ticker] = y_dc
