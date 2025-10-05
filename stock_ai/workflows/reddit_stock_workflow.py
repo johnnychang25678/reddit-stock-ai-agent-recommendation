@@ -23,6 +23,7 @@ def _idempotency_check(persistence: SqlAlchemyPersistence, run_id: str, table: s
         return False
     print(f"Checking if {table} already exists for run_id {run_id}...")
     existing = persistence.get(table, {"run_id": run_id})
+    print("existing:", existing)
     # will return a list of rows if any exist with this run_id
     return (existing is not None) and (isinstance(existing, list) and len(existing) > 0)
 
