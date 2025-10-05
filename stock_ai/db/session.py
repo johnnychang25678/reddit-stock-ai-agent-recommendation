@@ -29,7 +29,7 @@ def _get_engine():
             # for logging SQL queries, set environment variable SQL_ECHO=1
             echo=os.getenv("SQL_ECHO", "") == "1",
         )
-    print("db engine created")
+        print("db engine created")
     return _engine
 
 
@@ -38,7 +38,7 @@ def _get_session_local():
     global _SessionLocal
     if _SessionLocal is None:
         _SessionLocal = sessionmaker(bind=_get_engine(), expire_on_commit=False)
-    print("db session created")
+        print("db session created")
     return _SessionLocal
 
 

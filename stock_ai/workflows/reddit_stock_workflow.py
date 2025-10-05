@@ -15,15 +15,23 @@ from stock_ai.workflows.persistence.base_persistence import Persistence
 from stock_ai.notifiers.discord.reddit_stock_notifier import send_stock_recommendations_to_discord
 from stock_ai.workflows.common.api_clients import get_openai_client, get_reddit_scraper
 
+from sqlalchemy.inspection import inspect
+
 
 def _idempotency_check(persistence: SqlAlchemyPersistence, run_id: str, table: str) -> bool:
+    def row_to_dict(row):
+        """Convert a SQLAlchemy ORM row to dict (columns only)."""
+        return {c.key: getattr(row, c.key) for c in inspect(row).mapper.column_attrs}
+
     if run_id.startswith("no-idempotency-"):
         # disable idempotency check
         print("skip idempotency check...")
         return False
     print(f"Checking if {table} already exists for run_id {run_id}...")
     existing = persistence.get(table, {"run_id": run_id})
-    print("existing:", existing)
+    if isinstance(existing, list):
+        for row in existing:
+            print(row_to_dict(row))
     # will return a list of rows if any exist with this run_id
     return (existing is not None) and (isinstance(existing, list) and len(existing) > 0)
 
