@@ -7,8 +7,9 @@ from sqlalchemy import String, Text, Integer, Float, DateTime
 class RedditPost(Base):
     __tablename__ = "reddit_posts"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     run_id: Mapped[str] = mapped_column(String, index=True)
+    reddit_id: Mapped[str] = mapped_column(String, nullable=True)
     flair: Mapped[str] = mapped_column(String)
     title: Mapped[str] = mapped_column(String)
     selftext: Mapped[str] = mapped_column(Text)

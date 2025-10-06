@@ -57,7 +57,7 @@ class RedditScraper:
                 collect[flair] = []
 
             reddit_post = RedditPost(
-                id=post.id,
+                reddit_id=post.id,
                 flair=flair,
                 title=post.title,
                 selftext=post.selftext,

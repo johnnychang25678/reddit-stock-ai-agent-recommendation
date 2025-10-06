@@ -74,3 +74,18 @@ Example Discord Output:
 ## Roadmap
 - [ ] Develop evaluation framework to measure performance of recommendations over time
 - [ ] Integrate email notification channel so it becomes a newsletter system
+
+
+## How to
+
+### Database migration
+Uses Alembic for database migrations. To create a new migration after modifying the models, run:
+```bash
+uv run alembic revision --autogenerate -m "your message"
+```
+Make sure your `.env` file has `DATABASE_URL_REMOTE` set to your remote database URL. (For me, it's a Supabase Postgres database)
+
+Then apply the migration with:
+```bash
+DB_TARGET=REMOTE uv run alembic upgrade head
+```

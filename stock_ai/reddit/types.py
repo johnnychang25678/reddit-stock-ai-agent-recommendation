@@ -7,7 +7,7 @@ import stock_ai.db.models.reddit_filterd_post
 
 @dataclass
 class RedditPost:
-    id: str
+    reddit_id: str
     flair: str
     title: str
     selftext: str
@@ -21,7 +21,7 @@ class RedditPost:
     def from_orm(cls, orm_obj: stock_ai.db.models.reddit_post.RedditPost | 
                  stock_ai.db.models.reddit_filterd_post.RedditFilteredPost) -> "RedditPost":
         return cls(
-            id=orm_obj.id,
+            reddit_id=orm_obj.reddit_id,
             flair=orm_obj.flair,
             title=orm_obj.title,
             selftext=orm_obj.selftext,
