@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import concurrent.futures as cf
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Union, List, cast
 from collections.abc import Callable
 from stock_ai.workflows.persistence.base_persistence import Persistence
 
@@ -12,10 +12,15 @@ P = TypeVar("P", bound=Persistence)
 # params: persistence, run_id
 StepFn = Callable[[P, str], Any]
 
+# params: persistence, run_id -> list of StepFn.
+StepFnFactory = Callable[[P, str], list[StepFn]]
+
+StepFunctions = Union[list[StepFn], StepFnFactory]
+
 @dataclass
 class Step:
     name: str
-    functions: list[StepFn]  # list of functions to run in this step
+    functions: StepFunctions
 
 
 class Workflow:
@@ -28,11 +33,22 @@ class Workflow:
         # run each step serially
         for step in self.steps:
             print(f"Running step: {step.name}")
-            if len(step.functions) > 1:
+            functions = step.functions
+            if callable(step.functions):
+                # execute the factory to get the list of functions
+                functions = step.functions(self.persistence, self.run_id)
+    
+            # Tell the type checker that functions is now a list of StepFn
+            functions = cast(List[StepFn], functions)
+            if not functions:
+                print(f"No functions to run for step: {step.name}, skipping.")
+                continue
+
+            if len(functions) > 1:
                 # run in parallel
-                with cf.ThreadPoolExecutor(max_workers=len(step.functions) + 1) as ex:
-                    futures = [ex.submit(func, self.persistence, self.run_id) for func in step.functions]
+                with cf.ThreadPoolExecutor(max_workers=len(functions) + 1) as ex:
+                    futures = [ex.submit(func, self.persistence, self.run_id) for func in functions]
                     for future in cf.as_completed(futures):
                         future.result()
             else:
-                step.functions[0](self.persistence, self.run_id)
+                functions[0](self.persistence, self.run_id)

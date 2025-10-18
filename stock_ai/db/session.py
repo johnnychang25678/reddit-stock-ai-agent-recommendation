@@ -38,7 +38,7 @@ def _get_session_local():
     global _SessionLocal
     if _SessionLocal is None:
         _SessionLocal = sessionmaker(bind=_get_engine(), expire_on_commit=False)
-        print("db session created")
+        print("db session maker created")
     return _SessionLocal
 
 

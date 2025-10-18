@@ -25,5 +25,6 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    def act(self, context: Any) -> Any:
+    def act(self, context: Any, **kwargs) -> Any:
+        # use kwargs to create params for eval
         pass

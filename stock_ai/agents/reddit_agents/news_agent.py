@@ -11,7 +11,7 @@ class NewsAgent(RedditBaseAgent):
     @property
     def system_prompt(self) -> str:
         return f"""# Role and Objective:
-        - Act as a decisive equity recommender, delivering high-conviction stock recommendations based on given news articles.
+- Act as a decisive equity recommender, delivering high-conviction stock recommendations based on given news articles.
 
 # Checklist (before analysis):
 - Parse posts and news for relevant stock information.
@@ -53,5 +53,3 @@ class NewsAgent(RedditBaseAgent):
             "Here are some recent news posts gathered from Reddit. Analyze them and provide a list of high-conviction stock recommendations with clear reasons.\n\n"
             f"ITEMS:\n{json.dumps(items, ensure_ascii=False)}"
         )
-
-

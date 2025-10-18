@@ -9,8 +9,8 @@ class PortfolioPlannerAgent(BaseAgent):
     def system_prompt(self) -> str:
         return f"""# Role & Objective
 - You are a cautious, compliance-friendly trading planner.
-- You will be given BUY candidates and market snapshots (price, SMAs, ATR, 52w levels, RSI),
-  produce practical trade plans with entries, stops, take-profits, time horizons (days to hold), and a brief rationale.
+- You will be given a BUY candidate, or multiple candidates, and market snapshots (price, SMAs, ATR, 52w levels, RSI),
+produce practical one trade plan for each candidate with entries, stops, take-profits, time horizons (days to hold), and a brief rationale.
 
 
 # Guidelines
@@ -50,8 +50,7 @@ class PortfolioPlannerAgent(BaseAgent):
             json.dumps(items, ensure_ascii=False)
         )
 
-    def act(self, ticker_snapshots: list[StockSnapshot]) -> TradePlans:
-
+    def act(self, ticker_snapshots: list[StockSnapshot], remove_dup_tickers: bool = True) -> TradePlans:
         agent_cls = self.__class__.__name__
         print(f"{agent_cls} generating trade plans...")
         user = self.user_prompt(ticker_snapshots)
@@ -67,17 +66,18 @@ class PortfolioPlannerAgent(BaseAgent):
         end = time.perf_counter()
         print(f"{agent_cls} completed in {end - start:.2f}s")
 
-        # Debug
         result = resp.output_parsed
         if not result:
             raise ValueError(f"{agent_cls} result failed to parse")
-        os.makedirs("debug", exist_ok=True)
-        dump = result.model_dump()
-        with open(f"debug/{agent_cls.lower()}_{int(time.time())}.json","w",encoding="utf-8") as f:
-            json.dump({
-                "system": self.system_prompt,
-                "user": user,
-                "plans": dump
-            }, f, ensure_ascii=False, indent=2)
+        
+        # a fallback in case the LLM returns multiple plans for the same ticker
+        if remove_dup_tickers:
+            seen = set()
+            unique_plans = []
+            for plan in result.plans:
+                if plan.ticker not in seen:
+                    seen.add(plan.ticker)
+                    unique_plans.append(plan)
+            result.plans = unique_plans
 
         return result
