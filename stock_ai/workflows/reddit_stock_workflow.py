@@ -1,4 +1,5 @@
 from dataclasses import asdict
+from typing import Callable
 from stock_ai.agents.reddit_agents.reddit_base_agent import RedditBaseAgent
 from stock_ai.agents.stock_plan_agents.data_classes import TradePlan
 from stock_ai.reddit.types import RedditPost
@@ -15,7 +16,14 @@ from stock_ai.workflows.workflow_base import Workflow, Step, StepFn
 from stock_ai.workflows.persistence.base_persistence import Persistence
 from stock_ai.notifiers.discord.reddit_stock_notifier import send_stock_recommendations_to_discord
 from stock_ai.workflows.common.api_clients import get_openai_client, get_reddit_scraper
+from stock_ai.workflows.workflow_base import StepFnFactories, StepFns, StepFn, StepFnFactory
 
+
+def step_fn_dc_factory(funcs: list[StepFn]) -> StepFns:
+    return StepFns(functions=funcs)
+
+def step_fn_factory_dc_factory(factories: list[StepFnFactory]) -> StepFnFactories:
+    return StepFnFactories(factories=factories)
 
 def _idempotency_check(persistence: SqlAlchemyPersistence, run_id: str, table: str) -> bool:
     if run_id.startswith("no-idempotency-"):
@@ -244,7 +252,6 @@ def s_merge_and_notify_discord(persistence: SqlAlchemyPersistence, run_id: str) 
                 "stock_recommendations": asdict(recs_dc_dict[ticker]) if ticker in recs_dc_dict else None,
             }
 
-    # print(final_recs)
     # send to discord
     send_stock_recommendations_to_discord(final_recs)
 
@@ -253,16 +260,13 @@ def init_workflow(run_id: str, persistence: SqlAlchemyPersistence) -> Workflow:
         run_id=run_id,
         persistence=persistence,
         steps=[
-            Step("insert run metadata", [s_insert_run_metadata]),
-            Step("scrape reddit", [s_scrape]),
-            Step("filter posts", [s_filter]),
-            Step("run news agent", a_news_factory),
-            Step("run dd agent", a_dd_factory),
-            Step("run yolo agent", a_yolo_factory),
-            Step("fetch yf snapshots", [s_snapshots]),
-            Step("run planner agent", a_plan_factory),
-            # Step("run planner agent", [a_plan]),
-            Step("merge and notify discord", [s_merge_and_notify_discord]),
+            Step("insert run metadata", step_fn_dc_factory([s_insert_run_metadata])),
+            Step("scrape reddit", step_fn_dc_factory([s_scrape])),
+            Step("filter posts", step_fn_dc_factory([s_filter])),
+            Step("run stock agents", step_fn_factory_dc_factory([a_news_factory, a_dd_factory, a_yolo_factory])),
+            Step("fetch yf snapshots", step_fn_dc_factory([s_snapshots])),
+            Step("run planner agent", step_fn_factory_dc_factory([a_plan_factory])),
+            Step("merge and notify discord", step_fn_dc_factory([s_merge_and_notify_discord])),
         ]
     )
     return reddit_stock_workflow

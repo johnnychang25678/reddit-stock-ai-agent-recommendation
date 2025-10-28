@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 import concurrent.futures as cf
-from typing import Any, TypeVar, Union, List, cast
+from typing import Any, TypeVar, Union, cast
 from collections.abc import Callable
 from stock_ai.workflows.persistence.base_persistence import Persistence
+import inspect
 
 
 # This constrains P so that it must be either Persistence itself or a subclass of Persistence.
@@ -11,11 +12,18 @@ P = TypeVar("P", bound=Persistence)
 
 # params: persistence, run_id
 StepFn = Callable[[P, str], Any]
-
 # params: persistence, run_id -> list of StepFn.
 StepFnFactory = Callable[[P, str], list[StepFn]]
 
-StepFunctions = Union[list[StepFn], StepFnFactory]
+@dataclass
+class StepFns:
+    functions: list[StepFn]
+
+@dataclass
+class StepFnFactories:
+    factories: list[StepFnFactory]
+
+StepFunctions = Union[StepFns, StepFnFactories]
 
 @dataclass
 class Step:
@@ -33,13 +41,15 @@ class Workflow:
         # run each step serially
         for step in self.steps:
             print(f"Running step: {step.name}")
-            functions = step.functions
-            if callable(step.functions):
-                # execute the factory to get the list of functions
-                functions = step.functions(self.persistence, self.run_id)
-    
-            # Tell the type checker that functions is now a list of StepFn
-            functions = cast(List[StepFn], functions)
+            if isinstance(step.functions, StepFnFactories):
+                # it's a StepFnFactories instance
+                functions: list[StepFn] = []
+                for factory in step.functions.factories:
+                    funcs = factory(self.persistence, self.run_id)
+                    functions.extend(funcs)
+            else:
+                functions = step.functions.functions
+
             if not functions:
                 print(f"No functions to run for step: {step.name}, skipping.")
                 continue
