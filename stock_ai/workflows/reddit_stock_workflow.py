@@ -1,5 +1,4 @@
 from dataclasses import asdict
-from typing import Callable
 from stock_ai.agents.reddit_agents.reddit_base_agent import RedditBaseAgent
 from stock_ai.agents.stock_plan_agents.data_classes import TradePlan
 from stock_ai.reddit.types import RedditPost
@@ -13,17 +12,11 @@ from stock_ai.yahoo_finance.types import StockSnapshot
 from stock_ai.yahoo_finance.yahoo_finance_client import YahooFinanceClient
 from stock_ai.agents.stock_plan_agents.portfolio_planner_agent import PortfolioPlannerAgent
 from stock_ai.workflows.workflow_base import Workflow, Step, StepFn
-from stock_ai.workflows.persistence.base_persistence import Persistence
 from stock_ai.notifiers.discord.reddit_stock_notifier import send_stock_recommendations_to_discord
 from stock_ai.workflows.common.api_clients import get_openai_client, get_reddit_scraper
 from stock_ai.workflows.workflow_base import StepFnFactories, StepFns, StepFn, StepFnFactory
 
 
-def step_fn_dc_factory(funcs: list[StepFn]) -> StepFns:
-    return StepFns(functions=funcs)
-
-def step_fn_factory_dc_factory(factories: list[StepFnFactory]) -> StepFnFactories:
-    return StepFnFactories(factories=factories)
 
 def _idempotency_check(persistence: SqlAlchemyPersistence, run_id: str, table: str) -> bool:
     if run_id.startswith("no-idempotency-"):
@@ -100,10 +93,12 @@ def _make_stock_step_fn(agent_type: str, agent:RedditBaseAgent, p: RedditPost) -
 
         rows = []
         for r in recs.recommendations:
-            stock_rec_dc = StockRecommendation.from_pydantic(r)
-            d = asdict(stock_rec_dc)
-            d["run_id"] = run_id
-            rows.append(d)
+            print(r.ticker, r.decision)
+            if r.decision == "BUY":
+                stock_rec_dc = StockRecommendation.from_pydantic(r)
+                d = asdict(stock_rec_dc)
+                d["run_id"] = run_id
+                rows.append(d)
 
         persistence.set(f"{agent_type.lower()}_recommendations", rows)
     return step_fn
@@ -159,6 +154,9 @@ def a_news_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[Step
         return []
     flair = "News"
     filtered_posts = persistence.get("reddit_filtered_posts", run_id=run_id, flair=flair)
+    # test
+    filtered_posts = filtered_posts[:1]
+    print(filtered_posts)
     step_fns = _generate_stock_agent_step_functions(flair, filtered_posts)
 
     return step_fns
@@ -255,6 +253,13 @@ def s_merge_and_notify_discord(persistence: SqlAlchemyPersistence, run_id: str) 
     # send to discord
     send_stock_recommendations_to_discord(final_recs)
 
+# factories to generate dataclasses for Step. Use dataclass because it's easier to use isinstance checks for base workflow.
+def step_fn_dc_factory(funcs: list[StepFn]) -> StepFns:
+    return StepFns(functions=funcs)
+
+def step_fn_factory_dc_factory(factories: list[StepFnFactory]) -> StepFnFactories:
+    return StepFnFactories(factories=factories)
+
 def init_workflow(run_id: str, persistence: SqlAlchemyPersistence) -> Workflow:
     reddit_stock_workflow = Workflow(
         run_id=run_id,
@@ -263,7 +268,8 @@ def init_workflow(run_id: str, persistence: SqlAlchemyPersistence) -> Workflow:
             Step("insert run metadata", step_fn_dc_factory([s_insert_run_metadata])),
             Step("scrape reddit", step_fn_dc_factory([s_scrape])),
             Step("filter posts", step_fn_dc_factory([s_filter])),
-            Step("run stock agents", step_fn_factory_dc_factory([a_news_factory, a_dd_factory, a_yolo_factory])),
+            # Step("run stock agents", step_fn_factory_dc_factory([a_news_factory, a_dd_factory, a_yolo_factory])),
+            Step("run stock agents", step_fn_factory_dc_factory([a_news_factory])),
             Step("fetch yf snapshots", step_fn_dc_factory([s_snapshots])),
             Step("run planner agent", step_fn_factory_dc_factory([a_plan_factory])),
             Step("merge and notify discord", step_fn_dc_factory([s_merge_and_notify_discord])),

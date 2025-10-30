@@ -33,6 +33,9 @@ def send_stock_recommendations_to_discord(rec: dict):
     - Targets: The prices at which the trader plans to take profits.
     - Horizon: The time frame for the trade.
     - R/R: The risk-to-reward ratio of the trade (e.g., 1.5 means potential reward is 1.5× the risk).
+
+    ### List of Recommendations:
+    {", ".join(ticker for ticker in rec.keys())}
     """).strip()
 
     discord_client.send_message(content)

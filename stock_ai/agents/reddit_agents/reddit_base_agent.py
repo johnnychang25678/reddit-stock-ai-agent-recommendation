@@ -1,15 +1,17 @@
 from stock_ai.agents.base_agent import BaseAgent
 from stock_ai.reddit.types import RedditPost
 from stock_ai.agents.reddit_agents.pydantic_models import StockRecommendations
-import json
 import time
-import os
 
 class RedditBaseAgent(BaseAgent):
     """Base class for agents that analyze Reddit posts and provide stock recommendations.
     Sub-classes implement system_prompt and user_prompt methods.
     Shared act method to interact with OpenAI API and handle responses.
     """
+
+    WEB_SEARCH_TOOL_PROMPT: str = """When analyzing posts, always perform a brief web search for each ticker to verify recent catalysts, earnings news, or filings before forming a recommendation.
+Collect as much relevant information as possible from diverse sources.
+"""
 
     def act(self, posts: list[RedditPost]) -> StockRecommendations:
         agent_cls_name = self.__class__.__name__
@@ -22,30 +24,26 @@ class RedditBaseAgent(BaseAgent):
             input=user_prompt,
             text_format=StockRecommendations,
             reasoning={"effort": "medium"},
+            include=["web_search_call.action.sources"],
+            tools=[{"type": "web_search"}],
         )
         end = time.perf_counter()
         print(f"{agent_cls_name} act() completed in {end - start:.2f} seconds.")
+        print(resp.output)
 
-        # print("Raw response:", resp)
+        print(f"\nWeb Searches Performed:")
+        web_searches = [item for item in resp.output if item.type == 'web_search_call']
+        for i, search in enumerate(web_searches, 1):
+            print(f"\n  Search {i}:")
+            print(f"    Query: {search.action.query}")
+            print(f"    Status: {search.status}")
+            if hasattr(search.action, 'sources') and search.action.sources:
+                print(f"    Sources: {len(search.action.sources)}")
+                for src in search.action.sources:
+                    print(f"      - {src.url}")
 
         result = resp.output_parsed
         if not result:
             raise ValueError(f"{agent_cls_name} result failed to parse")
-
-        # write system promt, user prompt, and response to a single file for debugging
-        # os.makedirs("debug", exist_ok=True)
-        # with open(f"debug/{agent_cls_name.lower()}_debug_{int(time.time())}.txt", "w", encoding="utf-8") as f:
-        #     f.write("SYSTEM PROMPT:\n")
-        #     f.write(self.system_prompt)
-        #     f.write("\n\nUSER PROMPT:\n")
-        #     f.write(user_prompt)
-        #     f.write("\n\nRESPONSE:\n")
-        #     # Convert Pydantic model to dict for JSON serialization
-        #     result_dict = result.model_dump() if hasattr(result, "model_dump") else result.dict()
-        #     f.write(json.dumps(result_dict, ensure_ascii=False, indent=2))
-
-        #     # write raw response
-        #     f.write("\n\nRAW RESPONSE:\n")
-        #     f.write(str(resp))
 
         return result

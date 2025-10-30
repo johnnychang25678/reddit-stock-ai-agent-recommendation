@@ -10,7 +10,7 @@ import stock_ai.db.models.news_recommendation
 class StockRecommendation:
     ticker: str
     reason: str
-    confidence: str  # "high", "medium", "low"
+    confidence: str | None  # "high", "medium", "low"
     reddit_post_url: str | None
 
     @classmethod

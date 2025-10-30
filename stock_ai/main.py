@@ -24,7 +24,7 @@ def main():
         },
     )
     # run_id = time.strftime("%Y%m%d")
-    run_id = "johnny-test-102703"
+    run_id = "johnny-test-102804"
     init_workflow(run_id, persistence).run()
     e = time.perf_counter()
     print(f"Workflow completed in {e - s:.2f} seconds.")
