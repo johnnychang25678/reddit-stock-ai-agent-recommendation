@@ -10,8 +10,12 @@ class RedditBaseAgent(BaseAgent):
     """
 
     WEB_SEARCH_TOOL_PROMPT: str = """When analyzing posts, always perform a brief web search for each ticker to verify recent catalysts, earnings news, or filings before forming a recommendation.
-Collect as much relevant information as possible from diverse sources.
+Collect as much relevant information as possible from diverse sources. 
 """
+    STYLE_GUIDELINES_PROMPT: str = """# Style
+- Limit each reason to two paragraphs.
+- If you pick a ticker that was indirectly mentioned (e.g., a supplier or competitor), clearly explain the linkage in the reason.
+- Explicitly specify the catalyst (e.g., “FDA approval of new product X” or “Q3 revenue beat and guidance raise”)."""
 
     def act(self, posts: list[RedditPost]) -> StockRecommendations:
         agent_cls_name = self.__class__.__name__
@@ -24,23 +28,23 @@ Collect as much relevant information as possible from diverse sources.
             input=user_prompt,
             text_format=StockRecommendations,
             reasoning={"effort": "medium"},
-            include=["web_search_call.action.sources"],
+            # include=["web_search_call.action.sources"],
             tools=[{"type": "web_search"}],
         )
         end = time.perf_counter()
         print(f"{agent_cls_name} act() completed in {end - start:.2f} seconds.")
-        print(resp.output)
+        # print(resp.output)
 
-        print(f"\nWeb Searches Performed:")
-        web_searches = [item for item in resp.output if item.type == 'web_search_call']
-        for i, search in enumerate(web_searches, 1):
-            print(f"\n  Search {i}:")
-            print(f"    Query: {search.action.query}")
-            print(f"    Status: {search.status}")
-            if hasattr(search.action, 'sources') and search.action.sources:
-                print(f"    Sources: {len(search.action.sources)}")
-                for src in search.action.sources:
-                    print(f"      - {src.url}")
+        # print(f"\nWeb Searches Performed:")
+        # web_searches = [item for item in resp.output if item.type == 'web_search_call']
+        # for i, search in enumerate(web_searches, 1):
+        #     print(f"\n  Search {i}:")
+        #     print(f"    Query: {search.action.query}")
+        #     print(f"    Status: {search.status}")
+        #     if hasattr(search.action, 'sources') and search.action.sources:
+        #         print(f"    Sources: {len(search.action.sources)}")
+        #         for src in search.action.sources:
+        #             print(f"      - {src.url}")
 
         result = resp.output_parsed
         if not result:

@@ -111,5 +111,6 @@ When reviewing each recommendation, assess:
         """
         for res in result:
             if res not in valid_tickers:
+                print(f"[eval] Invalid ticker in result: {res}")
                 return False
         return True

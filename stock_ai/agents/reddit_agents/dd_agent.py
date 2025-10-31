@@ -36,9 +36,7 @@ class DDAgent(RedditBaseAgent):
 
 {self.COMMON_PROMPTS["AGENTIC_BALANCE"]}
 
-# Style
-- Limit each reason to five sentences or fewer.
-- Explicitly name the catalyst (e.g., “Q2 earnings beat and raised guidance”).
+{self.STYLE_GUIDELINES_PROMPT}
 """
 
     def user_prompt(self, posts: list[RedditPost]) -> str:

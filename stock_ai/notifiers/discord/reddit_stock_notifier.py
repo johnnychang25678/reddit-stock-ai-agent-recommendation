@@ -3,10 +3,20 @@ from stock_ai.notifiers.discord.discord_client import DiscordClient
 from stock_ai.notifiers.discord.embed_builder import build_embed
 import time
 import os
+import re
 from textwrap import dedent
 
 
-def _format_rec_detail(rec: dict) -> str:
+def _sanitize_reason(text: str) -> str:
+    """Remove AI citation artifacts and invisible characters for Discord display.
+    """
+    if not text:
+        return ""
+    text = re.sub(r'\ue200.*?\ue201', '', text)
+    return text.strip()
+
+
+def _format_rec_detail(rec: dict, reason_limit: int = 320) -> str:
     """Format a single recommendation block for Discord Markdown.
 
     Expected keys in rec:
@@ -16,9 +26,14 @@ def _format_rec_detail(rec: dict) -> str:
       - reddit_post_url: str | None
     """
     ticker = rec.get("ticker") or "?"
-    reason = (rec.get("reason") or "").strip()
+    reason = _sanitize_reason(rec.get("reason") or "")
+    url = rec.get("reddit_post_url") or None
 
     lines = [f"### {ticker}"]
+    if url:
+        # Wrap URL in angle brackets to suppress Discord's link preview (embeds)
+        # See: https://support.discord.com/hc/en-us/articles/206346498 for formatting
+        lines.append(f"- Source: <{url}>")
     if reason:
         lines.append(f"- Rationale: {reason}")
 

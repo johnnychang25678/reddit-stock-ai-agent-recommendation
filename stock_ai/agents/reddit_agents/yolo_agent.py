@@ -34,9 +34,7 @@ class YoloAgent(RedditBaseAgent):
 
 {self.COMMON_PROMPTS["AGENTIC_BALANCE"]}
 
-# Style
-- Limit each reason to five sentences or fewer.
-- Always specify the catalyst explicitly (e.g., “Raised FY2025 EPS guidance by 10% following strong Q2 earnings”).
+{self.STYLE_GUIDELINES_PROMPT}
 """
 
     def user_prompt(self, posts: list[RedditPost]) -> str:

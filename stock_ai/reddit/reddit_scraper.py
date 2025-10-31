@@ -65,7 +65,7 @@ class RedditScraper:
                 num_comments=post.num_comments,
                 upvote_ratio=post.upvote_ratio,
                 created=datetime.fromtimestamp(post.created_utc),
-                url=post.url
+                url="https://reddit.com" + post.permalink,
             )
 
             collect[flair].append(reddit_post)

@@ -72,6 +72,9 @@ def build_embed(ticker: str, info: dict) -> dict:
         reason = rec.get("reason") or "—"
         conf   = rec.get("confidence")
         srcurl = rec.get("reddit_post_url")
+        if srcurl:
+            # Angle brackets prevent Discord from auto-embedding previews
+            srcurl = f"<{srcurl}>"
         rec_lines = [
                      f"**Reddit Post URL:** {srcurl}" if srcurl else None,
                      f"**Analysis:** {reason}",

@@ -128,6 +128,7 @@ def _make_picker_step_fn(stock_recommendations: list[StockRecommendation]) -> li
         valid_tickers = [rec.ticker for rec in stock_recommendations]
         retry = 0
         while retry < 2 and not stock_picker_agent.evaluate(tickers, valid_tickers=valid_tickers):
+            print(f"[retry] Attempt {retry + 1}")
             final_recs = stock_picker_agent.act(stock_recommendations)
             tickers = final_recs.tickers
             retry += 1
@@ -207,7 +208,7 @@ def a_picker_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[St
 
     return step_fns
 
-def s_merge_and_notify_discord(persistence: SqlAlchemyPersistence, run_id: str) -> None:
+def s_notify_discord(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     frs = persistence.get("final_recommendations", run_id=run_id)
     final_recs: list[dict] = []
     for fr in frs:
@@ -215,7 +216,7 @@ def s_merge_and_notify_discord(persistence: SqlAlchemyPersistence, run_id: str) 
         final_recs.append(asdict(fr_dc))
     send_stock_recommendations_to_discord(final_recs)
 
-# factories to generate dataclasses for Step. Use dataclass because it's easier to use isinstance checks for base workflow.
+# factories to generate dataclasses for Step. Use dataclass because it's easier to use isinstance() in base workflow.
 def step_fn_dc_factory(funcs: list[StepFn]) -> StepFns:
     return StepFns(functions=funcs)
 
@@ -232,9 +233,7 @@ def init_workflow(run_id: str, persistence: SqlAlchemyPersistence) -> Workflow:
             Step("filter posts", step_fn_dc_factory([s_filter])),
             Step("run stock agents", step_fn_factory_dc_factory([a_news_factory, a_dd_factory, a_yolo_factory])),
             Step("run stock picker agent", step_fn_factory_dc_factory([a_picker_factory])),
-            Step("merge and notify discord", step_fn_dc_factory([s_merge_and_notify_discord])),
-            # Step("fetch yf snapshots", step_fn_dc_factory([s_snapshots])),
-            # Step("run planner agent", step_fn_factory_dc_factory([a_plan_factory])),
+            Step("merge and notify discord", step_fn_dc_factory([s_notify_discord])),
         ]
     )
     return reddit_stock_workflow
