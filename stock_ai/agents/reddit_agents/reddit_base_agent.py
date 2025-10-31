@@ -9,9 +9,13 @@ class RedditBaseAgent(BaseAgent):
     Shared act method to interact with OpenAI API and handle responses.
     """
 
-    WEB_SEARCH_TOOL_PROMPT: str = """When analyzing posts, always perform a brief web search for each ticker to verify recent catalysts, earnings news, or filings before forming a recommendation.
-Collect as much relevant information as possible from diverse sources. 
+    WEB_SEARCH_TOOL_PROMPT = """When analyzing posts, always perform a brief web search for each ticker
+to verify recent catalysts, earnings news, filings, and basic technical metrics
+(price, RSI, ATR, 52-week range, SMA20/50/200, trading volume, etc.).
+If you can find numeric snapshot data, include it in your reasoning.
+If data is not available, continue with qualitative reasoning.
 """
+
     STYLE_GUIDELINES_PROMPT: str = """# Style
 - Limit each reason to two paragraphs.
 - If you pick a ticker that was indirectly mentioned (e.g., a supplier or competitor), clearly explain the linkage in the reason.
