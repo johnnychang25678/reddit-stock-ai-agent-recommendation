@@ -1,6 +1,6 @@
 from stock_ai.agents.base_agent import BaseAgent
 from stock_ai.reddit.types import RedditPost
-from stock_ai.agents.reddit_agents.pydantic_models import StockRecommendations
+from stock_ai.agents.reddit_agents.pydantic_models import StockRecommendation, StockRecommendations
 import time
 
 class RedditBaseAgent(BaseAgent):
@@ -47,3 +47,16 @@ Collect as much relevant information as possible from diverse sources.
             raise ValueError(f"{agent_cls_name} result failed to parse")
 
         return result
+
+    def evaluate(self, result: StockRecommendations, actual_reddit_post_url: str) -> StockRecommendations:
+        out = StockRecommendations(recommendations=[])
+        for rec in result.recommendations:
+            rec_copy = StockRecommendation(
+                ticker=rec.ticker,
+                decision=rec.decision,
+                reason=rec.reason,
+                confidence=rec.confidence,
+                reddit_post_url=actual_reddit_post_url
+            )
+            out.recommendations.append(rec_copy)
+        return out

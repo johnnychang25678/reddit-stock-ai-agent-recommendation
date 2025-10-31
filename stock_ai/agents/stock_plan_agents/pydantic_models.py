@@ -11,3 +11,8 @@ class TradePlan(BaseModel):
 
 class TradePlans(BaseModel):
     plans: list[TradePlan]
+
+
+class StockRecommendationTickerList(BaseModel):
+    tickers: list[str] = Field(..., min_length=1, max_length=3, description="Top 1-3 stock tickers selected by the picker agent")
+    reason: str

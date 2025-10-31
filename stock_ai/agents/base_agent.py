@@ -28,3 +28,11 @@ class BaseAgent(ABC):
     def act(self, context: Any, **kwargs) -> Any:
         # use kwargs to create params for eval
         pass
+
+    @abstractmethod
+    def evaluate(self, result: Any, **kwargs) -> Any:
+        """
+        To evaluate the result of act.
+        Open to implementation, can either fix the result, or run a while loop until satisfactory
+        """
+        pass

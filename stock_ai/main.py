@@ -3,7 +3,7 @@ import time
 
 from stock_ai.db.models import (
     RedditPost, RedditFilteredPost, DdRecommendation, YoloRecommendation, RunMetaData,
-    NewsRecommendation, FinancialSnapshot, PortfolioPlan)
+    NewsRecommendation, FinancialSnapshot, PortfolioPlan, FinalRecommendation)
 from stock_ai.workflows.persistence.sql_alchemy_persistence import SqlAlchemyPersistence
 from stock_ai.workflows.reddit_stock_workflow import init_workflow
 from stock_ai.db.session import init_db
@@ -21,10 +21,11 @@ def main():
             "yolo_recommendations": YoloRecommendation,
             "financial_snapshots": FinancialSnapshot,
             "portfolio_plans": PortfolioPlan,
+            "final_recommendations": FinalRecommendation
         },
     )
     # run_id = time.strftime("%Y%m%d")
-    run_id = "johnny-test-102804"
+    run_id = "johnny-test-103002"
     init_workflow(run_id, persistence).run()
     e = time.perf_counter()
     print(f"Workflow completed in {e - s:.2f} seconds.")

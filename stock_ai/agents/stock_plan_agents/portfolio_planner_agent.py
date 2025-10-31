@@ -81,3 +81,6 @@ produce practical one trade plan for each candidate with entries, stops, take-pr
             result.plans = unique_plans
 
         return result
+    
+    def evaluate(self, result: TradePlans, **kwargs) -> TradePlans:
+        return result

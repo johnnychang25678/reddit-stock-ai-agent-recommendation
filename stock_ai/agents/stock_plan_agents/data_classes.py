@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import stock_ai.agents.stock_plan_agents.pydantic_models
 import stock_ai.db.models.portfolio_plan
+import stock_ai.db.models.final_recommendation
 
 @dataclass
 class TradePlan:
@@ -34,4 +35,20 @@ class TradePlan:
             time_horizon_days=orm_obj.time_horizon_days,
             risk_reward=orm_obj.risk_reward,
             rationale=orm_obj.rationale,
+        )
+
+@dataclass
+class FinalRecommendation:
+    ticker: str
+    reason: str
+    confidence: str | None  # "high", "medium", "low"
+    reddit_post_url: str | None
+    
+    @classmethod
+    def from_orm(cls, orm_obj: "stock_ai.db.models.final_recommendation.FinalRecommendation") -> "FinalRecommendation":
+        return cls(
+            ticker=orm_obj.ticker,
+            reason=orm_obj.reason,
+            confidence=orm_obj.confidence,
+            reddit_post_url=orm_obj.reddit_post_url,
         )

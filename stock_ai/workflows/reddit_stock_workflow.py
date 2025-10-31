@@ -1,6 +1,6 @@
-from dataclasses import asdict
 from stock_ai.agents.reddit_agents.reddit_base_agent import RedditBaseAgent
-from stock_ai.agents.stock_plan_agents.data_classes import TradePlan
+from stock_ai.agents.stock_plan_agents.data_classes import FinalRecommendation
+from stock_ai.agents.stock_plan_agents.stock_picker_agent import StockPickerAgent
 from stock_ai.reddit.types import RedditPost
 from stock_ai.reddit.post_scrape_filter import AfterScrapeFilter
 from stock_ai.agents.reddit_agents.data_classes import StockRecommendation
@@ -8,15 +8,12 @@ from stock_ai.agents.reddit_agents.news_agent import NewsAgent
 from stock_ai.agents.reddit_agents.dd_agent import DDAgent
 from stock_ai.agents.reddit_agents.yolo_agent import YoloAgent
 from stock_ai.workflows.persistence.sql_alchemy_persistence import SqlAlchemyPersistence
-from stock_ai.yahoo_finance.types import StockSnapshot
-from stock_ai.yahoo_finance.yahoo_finance_client import YahooFinanceClient
-from stock_ai.agents.stock_plan_agents.portfolio_planner_agent import PortfolioPlannerAgent
-from stock_ai.workflows.workflow_base import Workflow, Step, StepFn
+from stock_ai.workflows.workflow_base import StepFn, StepFns, StepFnFactory, StepFnFactories, Step, Workflow
 from stock_ai.notifiers.discord.reddit_stock_notifier import send_stock_recommendations_to_discord
 from stock_ai.workflows.common.api_clients import get_openai_client, get_reddit_scraper
-from stock_ai.workflows.workflow_base import StepFnFactories, StepFns, StepFn, StepFnFactory
 
-
+from dataclasses import asdict
+from sqlalchemy import text, bindparam
 
 def _idempotency_check(persistence: SqlAlchemyPersistence, run_id: str, table: str) -> bool:
     if run_id.startswith("no-idempotency-"):
@@ -89,7 +86,9 @@ def s_filter(persistence: SqlAlchemyPersistence, run_id: str) -> None:
 # need this to resolve late binding closure issue
 def _make_stock_step_fn(agent_type: str, agent:RedditBaseAgent, p: RedditPost) -> StepFn:
     def step_fn(persistence: SqlAlchemyPersistence, run_id: str) -> None:
+
         recs = agent.act([p])
+        agent.evaluate(recs, actual_reddit_post_url=p.url)
 
         rows = []
         for r in recs.recommendations:
@@ -120,31 +119,37 @@ def _generate_stock_agent_step_functions(agent_type: str, reddit_posts: list[Red
 
     return step_fns
 
-def _make_planner_step_fn(planner: PortfolioPlannerAgent, s: StockSnapshot) -> StepFn:
-    def step_fn(persistence: SqlAlchemyPersistence, run_id: str) -> None:
-        portfolio = planner.act([s])
-
-        trade_plans = portfolio.plans # pydantic
-        rows = []
-        for tp in trade_plans:
-            tp_dc = TradePlan.from_pydantic(tp)
-            d = asdict(tp_dc)
-            d["run_id"] = run_id
-            rows.append(d)
-
-        persistence.set("portfolio_plans", rows)
-    return step_fn
-
-def _generate_planner_step_functions(snapshots: list[StockSnapshot]) -> list[StepFn]:
-    """ Generate step functions for each StockSnapshot for the planner agent. """
+def _make_picker_step_fn(stock_recommendations: list[StockRecommendation]) -> list[StepFn]:
     openai = get_openai_client()
-    planner = PortfolioPlannerAgent(openai)
-    step_fns = []
-    for s in snapshots:
-        step_fn = _make_planner_step_fn(planner, s)
-        step_fns.append(step_fn)
+    stock_picker_agent = StockPickerAgent(openai)
+    def step_fn(persistence: SqlAlchemyPersistence, run_id: str) -> None:
+        final_recs = stock_picker_agent.act(stock_recommendations)
+        tickers = final_recs.tickers
+        valid_tickers = [rec.ticker for rec in stock_recommendations]
+        retry = 0
+        while retry < 2 and not stock_picker_agent.evaluate(tickers, valid_tickers=valid_tickers):
+            final_recs = stock_picker_agent.act(stock_recommendations)
+            tickers = final_recs.tickers
+            retry += 1
+        text_clause = text(
+            "SELECT * FROM news_recommendations WHERE run_id = :run_id AND ticker IN :ticker UNION ALL " \
+            "SELECT * FROM dd_recommendations WHERE run_id = :run_id AND ticker IN :ticker UNION ALL " \
+            "SELECT * FROM yolo_recommendations WHERE run_id = :run_id AND ticker IN :ticker"
+        ).bindparams(bindparam("ticker", expanding=True))
+        rec_rows =persistence.query(text_clause, {"run_id": run_id, "ticker": tickers})
+        final_rows = []
+        for rec_row in rec_rows:
+            row = {
+                "run_id": rec_row.run_id,
+                "ticker": rec_row.ticker,
+                "reason": rec_row.reason,
+                "confidence": rec_row.confidence,
+                "reddit_post_url": rec_row.reddit_post_url,
+            }
+            final_rows.append(row)
 
-    return step_fns
+        persistence.set("final_recommendations", final_rows)
+    return [step_fn]
 
 #-------- End of factory functions --------
 
@@ -154,9 +159,6 @@ def a_news_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[Step
         return []
     flair = "News"
     filtered_posts = persistence.get("reddit_filtered_posts", run_id=run_id, flair=flair)
-    # test
-    filtered_posts = filtered_posts[:1]
-    print(filtered_posts)
     step_fns = _generate_stock_agent_step_functions(flair, filtered_posts)
 
     return step_fns
@@ -181,76 +183,36 @@ def a_yolo_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[Step
 
     return step_fns
 
-def s_snapshots(persistence: SqlAlchemyPersistence, run_id: str) -> None:
-    if _idempotency_check(persistence, run_id, "financial_snapshots"):
-        print(f"Snapshots already fetched for run_id {run_id}, skipping financial snapshots step")
-        return
-    yf = YahooFinanceClient()
-    news_recs = persistence.get("news_recommendations", run_id=run_id)
-    dd_recs = persistence.get("dd_recommendations", run_id=run_id)
-    yolo_recs = persistence.get("yolo_recommendations", run_id=run_id)
-    tickers = set()
-    for rec in news_recs + dd_recs + yolo_recs:
-        tickers.add(rec.ticker)
-    print(f"Fetching snapshots for tickers: {tickers}")
-    snaps = [yf.get_yf_snapshot(t) for t in tickers]
-    rows = []
-    for s in snaps:
-        d = asdict(s)
-        d["run_id"] = run_id
-        del d["error"] # delete error field before saving to DB
-        rows.append(d)
-
-    persistence.set("financial_snapshots", rows)
-
-def a_plan_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[StepFn]:
-    if _idempotency_check(persistence, run_id, "portfolio_plans"):
-        print(f"Portfolio already planned for run_id {run_id}, skipping planner step")
+def a_picker_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[StepFn]:
+    if _idempotency_check(persistence, run_id, "final_recommendations"):
+        print(f"Final recommendations already generated for run_id {run_id}, skipping Picker agent step")
         return []
-    snapshots = persistence.get("financial_snapshots", run_id=run_id)
-    snapshots_dc = [StockSnapshot.from_orm(s) for s in snapshots]
-    step_fns = _generate_planner_step_functions(snapshots_dc)
+    text_clause = text(
+        "SELECT * FROM news_recommendations WHERE run_id = :run_id UNION ALL " \
+        "SELECT * FROM dd_recommendations WHERE run_id = :run_id UNION ALL " \
+        "SELECT * FROM yolo_recommendations WHERE run_id = :run_id"
+    )
+    stock_recommendations = persistence.query(text_clause, {"run_id": run_id})
+    list_dc = []
+    for sr in stock_recommendations:
+        sr_dc = StockRecommendation(
+            ticker=sr.ticker,
+            reason=sr.reason,
+            confidence=sr.confidence,
+            reddit_post_url=sr.reddit_post_url,
+        )
+        list_dc.append(sr_dc)
+
+    step_fns = _make_picker_step_fn(list_dc)
+
     return step_fns
 
 def s_merge_and_notify_discord(persistence: SqlAlchemyPersistence, run_id: str) -> None:
-    print("************ Final merge step ************")
-    # combine everything into final recommendations by ticker
-    final_recs = {}
-    portfolio_plans = persistence.get("portfolio_plans", run_id=run_id)
-
-    snapshots = persistence.get("financial_snapshots", run_id=run_id)
-    snapshot_dc_dict = {}
-    for s in snapshots:
-        snapshot_dc = StockSnapshot.from_orm(s)
-        snapshot_dc_dict[snapshot_dc.ticker] = snapshot_dc
-
-    news_recs = persistence.get("news_recommendations", run_id=run_id)
-    recs_dc_dict = {}
-    for n in news_recs:
-        n_dc = StockRecommendation.from_orm(n)
-        recs_dc_dict[n_dc.ticker] = n_dc
-
-    dd_recs = persistence.get("dd_recommendations", run_id=run_id)
-    for d in dd_recs:
-        d_dc = StockRecommendation.from_orm(d)
-        recs_dc_dict[d_dc.ticker] = d_dc
-
-    yolo_recs = persistence.get("yolo_recommendations", run_id=run_id)
-    for y in yolo_recs:
-        y_dc = StockRecommendation.from_orm(y)
-        recs_dc_dict[y_dc.ticker] = y_dc
-
-    for p in portfolio_plans:
-        print(p.ticker)
-        ticker = p.ticker
-        if ticker not in final_recs:
-            final_recs[ticker] = {
-                "portfolio": asdict(TradePlan.from_orm(p)),
-                "snapshot": asdict(snapshot_dc_dict[ticker]) if ticker in snapshot_dc_dict else None,
-                "stock_recommendations": asdict(recs_dc_dict[ticker]) if ticker in recs_dc_dict else None,
-            }
-
-    # send to discord
+    frs = persistence.get("final_recommendations", run_id=run_id)
+    final_recs: list[dict] = []
+    for fr in frs:
+        fr_dc = FinalRecommendation.from_orm(fr)
+        final_recs.append(asdict(fr_dc))
     send_stock_recommendations_to_discord(final_recs)
 
 # factories to generate dataclasses for Step. Use dataclass because it's easier to use isinstance checks for base workflow.
@@ -268,11 +230,11 @@ def init_workflow(run_id: str, persistence: SqlAlchemyPersistence) -> Workflow:
             Step("insert run metadata", step_fn_dc_factory([s_insert_run_metadata])),
             Step("scrape reddit", step_fn_dc_factory([s_scrape])),
             Step("filter posts", step_fn_dc_factory([s_filter])),
-            # Step("run stock agents", step_fn_factory_dc_factory([a_news_factory, a_dd_factory, a_yolo_factory])),
-            Step("run stock agents", step_fn_factory_dc_factory([a_news_factory])),
-            Step("fetch yf snapshots", step_fn_dc_factory([s_snapshots])),
-            Step("run planner agent", step_fn_factory_dc_factory([a_plan_factory])),
+            Step("run stock agents", step_fn_factory_dc_factory([a_news_factory, a_dd_factory, a_yolo_factory])),
+            Step("run stock picker agent", step_fn_factory_dc_factory([a_picker_factory])),
             Step("merge and notify discord", step_fn_dc_factory([s_merge_and_notify_discord])),
+            # Step("fetch yf snapshots", step_fn_dc_factory([s_snapshots])),
+            # Step("run planner agent", step_fn_factory_dc_factory([a_plan_factory])),
         ]
     )
     return reddit_stock_workflow

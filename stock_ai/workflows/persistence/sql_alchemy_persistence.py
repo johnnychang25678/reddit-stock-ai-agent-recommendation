@@ -1,5 +1,6 @@
 from typing import Any, Mapping
-from sqlalchemy import select, insert
+from sqlalchemy import Row, select, insert, text
+from sqlalchemy.sql.elements import TextClause
 
 from stock_ai.db.session import get_session
 from stock_ai.db.base import Base
@@ -71,5 +72,7 @@ class SqlAlchemyPersistence(Persistence):
         # No use cases for now.
         pass
 
-    def hello(self) -> str:
-        return "Hello from SqlAlchemyPersistence"
+    def query(self, text_clause: TextClause, params: dict) -> list[Row[Any]]:
+        with get_session() as s:
+            res = s.execute(text_clause, params)
+            return list(res.fetchall())

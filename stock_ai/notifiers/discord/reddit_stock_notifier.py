@@ -5,42 +5,45 @@ import time
 import os
 from textwrap import dedent
 
-def send_stock_recommendations_to_discord(rec: dict):
-    webhook_url = os.getenv("DISCORD_WEBHOOK_URL_TEST", "")
-    if not webhook_url:
+
+def _format_rec_detail(rec: dict) -> str:
+    """Format a single recommendation block for Discord Markdown.
+
+    Expected keys in rec:
+      - ticker: str
+      - reason: str
+      - confidence: str | None  # "high", "medium", "low"
+      - reddit_post_url: str | None
+    """
+    ticker = rec.get("ticker") or "?"
+    reason = (rec.get("reason") or "").strip()
+
+    lines = [f"### {ticker}"]
+    if reason:
+        lines.append(f"- Rationale: {reason}")
+
+    return "\n".join(lines)
+
+def send_stock_recommendations_to_discord(recs: list[dict]):
+    webhook_urls = os.getenv("DISCORD_WEBHOOK_URL_TEST", "")
+    if not webhook_urls:
         print("DISCORD_WEBHOOK_URL_TEST not set, skipping Discord notification")
         return
-    discord_client = DiscordClient(webhook_url)
-    week_str = time.strftime("%Y-%m-%d", time.localtime(time.time() - 7*24*3600))
-    content = dedent(f"""
-    ## Stock AI Recommendations for week of {week_str}
+    webhook_urls_list = [url.strip() for url in webhook_urls.split(",") if url.strip()]
+    for url in webhook_urls_list:
+        discord_client = DiscordClient(url)
+        week_str = time.strftime("%Y-%m-%d", time.localtime(time.time() - 7*24*3600))
+        details = "\n".join(_format_rec_detail(rec) for rec in recs) if recs else "(No recommendations)"
+        # Build without leading whitespace so Discord doesn't render as a code block
+        header_line = f"## Reddit Stock AI Recommendations for week of {week_str}"
+        tickers_line = ", ".join(rec["ticker"] for rec in recs)
+        content = "\n".join([
+            header_line,
+            "",
+            tickers_line,
+            "### Details",
+            details,
+        ]).strip()
 
-    ### Methodology:
-    1. Scrape recent posts from r/wallstreetbets with flairs: News, DD, YOLO.
-    2. Filter posts by upvotes and engagement to retain high-quality content.
-    3. Use AI agents to analyze posts by flair:
-       - News Agent: Extracts stock mentions and sentiment from news posts.
-       - DD Agent: Provides high-conviction buy ideas from due diligence posts.
-       - YOLO Agent: Identifies speculative, high-risk/reward ideas from YOLO posts.
-    4. Merge and deduplicate recommendations from all agents.
-    5. Fetch latest stock data and technical indicators for recommended tickers.
-    6. Use a Portfolio Planner Agent to create trading plans with entry, stop, targets, and risk/reward.
-    7. Compile final recommendations with analysis, snapshot, and trading strategy.
-
-    ### Legend for Trading Strategy fields:
-    - Entry: The price at which the trader enters the position.
-    - Stop: The price at which the trader will exit the position to prevent further losses.
-    - Targets: The prices at which the trader plans to take profits.
-    - Horizon: The time frame for the trade.
-    - R/R: The risk-to-reward ratio of the trade (e.g., 1.5 means potential reward is 1.5× the risk).
-
-    ### List of Recommendations:
-    {", ".join(ticker for ticker in rec.keys())}
-    """).strip()
-
-    discord_client.send_message(content)
-    for ticker, info in rec.items():
-        embed = build_embed(ticker, info)
-        discord_client.send_embed(embed)
-        time.sleep(0.5)
+        discord_client.send_message(content)
     

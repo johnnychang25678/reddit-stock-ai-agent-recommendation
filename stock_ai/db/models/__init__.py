@@ -6,3 +6,4 @@ from stock_ai.db.models.yolo_recommendation import YoloRecommendation
 from stock_ai.db.models.news_recommendation import NewsRecommendation
 from stock_ai.db.models.financial_snapshot import FinancialSnapshot
 from stock_ai.db.models.portfolio_plan import PortfolioPlan
+from stock_ai.db.models.final_recommendation import FinalRecommendation
