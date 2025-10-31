@@ -56,7 +56,7 @@ class TestSqlAlchemyPersistence:
 
     @patch('stock_ai.workflows.persistence.sql_alchemy_persistence.get_session')
     def test_get_unknown_key(self, mock_get_session, persistence):
-        with pytest.raises(KeyError, match="Unknown key 'unknown'"):
+        with pytest.raises(KeyError, match="'Unknown table unknown'"):
             persistence.get("unknown")
 
     @patch('stock_ai.workflows.persistence.sql_alchemy_persistence.select')
@@ -94,6 +94,6 @@ class TestSqlAlchemyPersistence:
         mock_session.execute.assert_called_once_with(mock_stmt)
         mock_session.commit.assert_called_once()
 
-    def test_set_unknown_key(self, persistence):
-        with pytest.raises(KeyError, match="Unknown key 'unknown'"):
+    def test_set_unknown_table(self, persistence):
+        with pytest.raises(KeyError, match="Unknown table \'unknown\'"):
             persistence.set("unknown", [])
