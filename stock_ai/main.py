@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import time
+from datetime import date, timedelta
 
 from stock_ai.db.models import (
     RedditPost, RedditFilteredPost, DdRecommendation, YoloRecommendation, RunMetaData,
@@ -7,6 +8,7 @@ from stock_ai.db.models import (
 from stock_ai.workflows.persistence.sql_alchemy_persistence import SqlAlchemyPersistence
 from stock_ai.workflows.reddit_stock_workflow import init_workflow
 from stock_ai.db.session import init_db
+from stock_ai.workflows.run_id_generator import RunIdType
 
 def main():
     s = time.perf_counter()
@@ -24,8 +26,12 @@ def main():
             "final_recommendations": FinalRecommendation
         },
     )
-    run_id = time.strftime("%Y%m%d")
-    # run_id = "johnny-test-103006"
+    # use sunday + 1 day (Monday) so the trade workflow is easier to fetch the id
+    # e.g., 20251123 is Sunday, so this becomes 20251124 (Monday)
+    # today_plus_one = (date.today() + timedelta(days=1)).strftime("%Y%m%d") 
+    # run_id = RunIdType.REDDIT_STOCK_RECOMMENDATION.value + "_" + today_plus_one
+    run_id = RunIdType.TEST_RUN.value + "_" + "20251124-1"
+
     init_workflow(run_id, persistence).run()
     e = time.perf_counter()
     print(f"Workflow completed in {e - s:.2f} seconds.")

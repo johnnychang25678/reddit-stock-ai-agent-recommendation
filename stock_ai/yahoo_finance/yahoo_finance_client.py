@@ -116,5 +116,5 @@ class YahooFinanceClient:
 
 # Example usage:
 # cl = YahooFinanceClient()
-# price = cl.get_current_price("AAPL")
+# price = cl.get_current_price("^GSPC")
 # print(price)
