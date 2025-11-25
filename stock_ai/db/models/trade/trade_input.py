@@ -2,7 +2,8 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, Integer, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from stock_ai.db.base import Base
@@ -22,7 +23,7 @@ class TradeInput(Base):
     has_data: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     portfolio_id: Mapped[int] = mapped_column(Integer, nullable=False)
     portfolio_cash: Mapped[float] = mapped_column(Float, nullable=False)
-    recommendations_json: Mapped[str] = mapped_column(Text, nullable=False)  # JSON array of recommendations
-    prices_json: Mapped[str] = mapped_column(Text, nullable=False)  # JSON object of ticker -> price
-    positions_json: Mapped[str] = mapped_column(Text, nullable=False)  # JSON array of current positions
+    recommendations_json: Mapped[dict] = mapped_column(JSONB, nullable=False)  # JSON array of recommendations
+    prices_json: Mapped[dict] = mapped_column(JSONB, nullable=False)  # JSON object of ticker -> price
+    positions_json: Mapped[dict] = mapped_column(JSONB, nullable=False)  # JSON array of current positions
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
