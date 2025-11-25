@@ -86,3 +86,35 @@ class YahooFinanceClient:
         if math.isnan(value):
             return float("nan")
         return round(value, ndigits)
+
+    def get_current_price(self, ticker: str) -> float:
+        """Get the current/latest price for a ticker.
+        
+        Returns the most recent price available:
+        - During market hours: may include intraday price
+        - After hours: returns last close price
+        """
+        try:
+            stock = yf.Ticker(ticker)
+            # Try to get real-time price first
+            info = stock.info
+            
+            # Priority order for getting current price
+            current_price = (
+                info.get("currentPrice") or 
+                info.get("regularMarketPrice") or
+                info.get("previousClose")
+            )
+            
+            if current_price is None or math.isnan(float(current_price)):
+                return float("nan")
+                
+            return round(float(current_price), 2)
+        except Exception as e:
+            print(f"Error fetching current price for {ticker}: {e}")
+            return float("nan")
+
+# Example usage:
+# cl = YahooFinanceClient()
+# price = cl.get_current_price("AAPL")
+# print(price)
