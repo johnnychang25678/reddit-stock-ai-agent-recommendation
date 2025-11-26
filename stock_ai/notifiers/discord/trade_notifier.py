@@ -79,7 +79,53 @@ def _format_performance_summary(snapshot, portfolio) -> str:
     return "\n".join(lines)
 
 
-def send_trade_summary_to_discord(trades: list, snapshot, portfolio, run_id: str):
+def _format_positions_table(positions: list) -> str:
+    """Format current positions as a table for Discord.
+
+    Args:
+        positions: List of Position ORM objects with attributes: ticker, quantity, avg_entry_price, current_price, unrealized_pnl
+    """
+    if not positions:
+        return "## 📋 Current Positions\nNo open positions"
+
+    lines = ["## 📋 Current Positions"]
+    
+    # Add table header
+    lines.append("```")
+    lines.append(f"{'Ticker':<8} {'Qty':>6} {'Avg Cost':>10} {'Current':>10} {'Value':>12} {'P&L':>12} {'Return':>8}")
+    lines.append("-" * 80)
+    
+    # Add each position
+    for pos in positions:
+        market_value = pos.quantity * pos.current_price
+        pnl_str = f"${pos.unrealized_pnl:,.2f}" if pos.unrealized_pnl is not None else "N/A"
+        
+        # Calculate return percentage
+        if pos.avg_entry_price > 0:
+            return_pct = ((pos.current_price - pos.avg_entry_price) / pos.avg_entry_price) * 100
+            return_str = f"{return_pct:>7.2f}%"
+        else:
+            return_str = "N/A"
+        
+        lines.append(
+            f"{pos.ticker:<8} {pos.quantity:>6} "
+            f"${pos.avg_entry_price:>9.2f} ${pos.current_price:>9.2f} "
+            f"${market_value:>11,.2f} {pnl_str:>12} {return_str:>8}"
+        )
+    
+    # Add total
+    total_value = sum(pos.quantity * pos.current_price for pos in positions)
+    total_pnl = sum(pos.unrealized_pnl for pos in positions if pos.unrealized_pnl is not None)
+    total_cost = sum(pos.quantity * pos.avg_entry_price for pos in positions)
+    total_return_pct = ((total_value - total_cost) / total_cost * 100) if total_cost > 0 else 0.0
+    lines.append("-" * 80)
+    lines.append(f"{'TOTAL':<8} {'':<6} {'':<10} {'':<10} ${total_value:>11,.2f} ${total_pnl:>11,.2f} {total_return_pct:>7.2f}%")
+    lines.append("```")
+    
+    return "\n".join(lines)
+
+
+def send_trade_summary_to_discord(trades: list, snapshot, portfolio, run_id: str, positions: list, is_trade: bool):
     """Send trade summary and performance metrics to Discord.
 
     Args:
@@ -87,6 +133,8 @@ def send_trade_summary_to_discord(trades: list, snapshot, portfolio, run_id: str
         snapshot: PerformanceSnapshot ORM object or None
         portfolio: Portfolio ORM object or None
         run_id: Workflow run identifier
+        positions: List of Position ORM objects (optional)
+        is_trade: Boolean indicating if this is a trade run
     """
     webhook_urls = os.getenv("DISCORD_WEBHOOK_URL_TEST", "")
     if not webhook_urls:
@@ -100,7 +148,10 @@ def send_trade_summary_to_discord(trades: list, snapshot, portfolio, run_id: str
         date_str = time.strftime("%Y-%m-%d", time.localtime())
 
         # Build header
-        header = f"# 🤖 Weekly Trade Bot - {date_str}"
+        if is_trade:
+            header = f"# 🤖 Weekly Trade Bot - {date_str}"
+        else:
+            header = f"# 📈 Daily Performance Update - {date_str}"
 
         # Group trades by action
         buys = [t for t in trades if t.action == "BUY"]
@@ -125,17 +176,24 @@ def send_trade_summary_to_discord(trades: list, snapshot, portfolio, run_id: str
             hold_lines.extend([_format_trade(t) for t in holds])
             trade_sections.append("\n".join(hold_lines))
 
-        if not trade_sections:
+        if is_trade and not trade_sections:
             trade_sections.append("No trades executed this week.")
 
         # Performance summary
         performance = _format_performance_summary(snapshot, portfolio)
 
+        # Positions table
+        positions_table = _format_positions_table(positions) if positions else ""
+
         # Combine all sections
         MAX_DISCORD_LENGTH = 2000
 
         # Try to fit everything in one message
-        content = "\n\n".join([header] + trade_sections + [performance]).strip()
+        sections_to_combine = [header] + trade_sections + [performance]
+        if positions_table:
+            sections_to_combine.append(positions_table)
+        
+        content = "\n\n".join(sections_to_combine).strip()
 
         if len(content) <= MAX_DISCORD_LENGTH:
             # Fits in one message
@@ -173,5 +231,9 @@ def send_trade_summary_to_discord(trades: list, snapshot, portfolio, run_id: str
                     # Send remaining batch
                     if len(current_batch) > 1:  # More than just the header
                         discord_client.send_message("\n".join(current_batch))
+
+            # Send positions table last
+            if positions_table:
+                discord_client.send_message(positions_table)
 
         print(f"Sent trade summary to Discord webhook")

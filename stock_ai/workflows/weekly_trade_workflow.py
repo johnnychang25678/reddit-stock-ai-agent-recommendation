@@ -169,7 +169,7 @@ def s_trade_decision_and_execute(persistence: SqlAlchemyPersistence, run_id: str
     """Step 2: Agent makes decisions and executes trades atomically.
 
     This step:
-    - Calls TradeAgent to make BUY/SELL/HOLD decisions
+    - Calls TradeAgent to make BUY/SELL/HOLD/DO_NOTHING decisions
     - Immediately executes all trades
     - Updates positions, portfolio, and creates performance snapshot
     - All DB updates happen in this single step for atomicity
@@ -341,6 +341,22 @@ def s_trade_decision_and_execute(persistence: SqlAlchemyPersistence, run_id: str
                 }
                 trades.append(trade)
                 print(f"HOLD {pos['quantity']} {ticker} @ ${current_price:.2f}")
+        elif action == "DO_NOTHING":
+            # Log DO_NOTHING action
+            trade = {
+                "portfolio_id": portfolio_id,
+                "run_id": run_id,
+                "ticker": ticker,
+                "action": "DO_NOTHING",
+                "quantity": 0,
+                "price": current_price,
+                "total_cost": 0.0,
+                "reason": reason,
+                "realized_pnl": None,
+                "final_recommendation_id": None,
+            }
+            trades.append(trade)
+            print(f"DO_NOTHING for {ticker} @ ${current_price:.2f}")
 
     # 4. Persist all trades
     if trades:
@@ -446,12 +462,20 @@ def s_notify_discord(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     portfolio_rows = persistence.query(text_clause, {"name": DEFAULT_PORTFOLIO_NAME})
     portfolio = portfolio_rows[0] if portfolio_rows else None
 
+    # Get current positions
+    positions = []
+    if portfolio:
+        text_clause = text("SELECT * FROM positions WHERE portfolio_id = :portfolio_id")
+        positions = persistence.query(text_clause, {"portfolio_id": portfolio.id})
+
     # Send to Discord
     send_trade_summary_to_discord(
         trades=trades,
         snapshot=snapshot,
         portfolio=portfolio,
-        run_id=run_id
+        run_id=run_id,
+        positions=positions,
+        is_trade=True
     )
 
 

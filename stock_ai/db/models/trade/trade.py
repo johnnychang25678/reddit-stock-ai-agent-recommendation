@@ -12,7 +12,7 @@ from stock_ai.db.base import Base
 class Trade(Base):
     """Historical trade log.
 
-    Records every BUY, SELL, and HOLD decision for performance analysis.
+    Records every BUY, SELL, HOLD, and DO_NOTHING decision for performance analysis.
     """
 
     __tablename__ = "trades"
@@ -21,8 +21,8 @@ class Trade(Base):
     portfolio_id: Mapped[int] = mapped_column(Integer, nullable=False)  # FK to Portfolio.id
     run_id: Mapped[str] = mapped_column(String, nullable=False)
     ticker: Mapped[str] = mapped_column(String, nullable=False)
-    action: Mapped[str] = mapped_column(String, nullable=False)  # BUY, SELL, HOLD
-    quantity: Mapped[int] = mapped_column(Integer, nullable=False)  # 0 for HOLD
+    action: Mapped[str] = mapped_column(String, nullable=False)  # BUY, SELL, HOLD, DO_NOTHING
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)  # 0 for HOLD or DO_NOTHING
     price: Mapped[float] = mapped_column(Float, nullable=False)  # Per share price (SELL or BUY)
     total_cost: Mapped[float] = mapped_column(Float, nullable=False)  # quantity * price
     reason: Mapped[str] = mapped_column(String, nullable=False)  # Agent's decision reason

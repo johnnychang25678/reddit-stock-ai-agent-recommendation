@@ -7,7 +7,7 @@ from typing import Literal
 class TradeDecision(BaseModel):
     """A single trade decision made by the agent."""
     ticker: str = Field(..., description="Stock ticker symbol")
-    action: Literal["BUY", "SELL", "HOLD"] = Field(..., description="Trading action")
+    action: Literal["BUY", "SELL", "HOLD", "DO_NOTHING"] = Field(..., description="Trading action")
     quantity: int = Field(..., ge=0, description="Number of shares (0 for HOLD)")
     reason: str = Field(..., min_length=1, max_length=500, description="Reasoning for this decision")
 

@@ -30,7 +30,7 @@ def main():
     # e.g., 20251123 is Sunday, so this becomes 20251124 (Monday)
     # today_plus_one = (date.today() + timedelta(days=1)).strftime("%Y%m%d") 
     # run_id = RunIdType.REDDIT_STOCK_RECOMMENDATION.value + "_" + today_plus_one
-    run_id = RunIdType.TEST_RUN.value + "_" + "20251124-1"
+    run_id = RunIdType.TEST_RUN.value + "_" + "20251126-1"
 
     init_workflow(run_id, persistence).run()
     e = time.perf_counter()

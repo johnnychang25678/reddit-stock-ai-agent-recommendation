@@ -5,19 +5,19 @@ from stock_ai.agents.trade_agents.pydantic_models import TradeDecisions
 
 
 class TradeAgent(BaseAgent):
-    """Trade agent that makes BUY/SELL/HOLD decisions."""
+    """Trade agent that makes BUY/SELL/HOLD/DO_NOTHING decisions."""
 
     @property
     def system_prompt(self) -> str:
         return f"""# Role & Objective
-You are a practical trading agent managing a retail stock portfolio.
+You are a seasoned, pragmatic trading agent managing a retail stock portfolio.
 
 Your job is to review:
-- Final stock recommendations from a reddit-based AI analysis system
-- Current market prices
+- Stock recommendations from stock analysis experts
 - Current portfolio state (cash balance and existing positions)
+- Current market prices
 
-Then decide BUY, SELL, or HOLD for each ticker.
+Then decide BUY, SELL, HOLD, or DO_NOTHING for each ticker.
 
 # Trading Guidelines
 
@@ -27,22 +27,24 @@ Then decide BUY, SELL, or HOLD for each ticker.
 - Calculate exact share quantities based on current market price
 
 ## BUY Decisions
+- BUY recommended stocks with strong upside potential based on the experts' reasons and confidence levels
 - Only BUY if you have sufficient cash available
 - Consider recommendation confidence ("high" is more favorable than "low")
 - Consider diversification - don't buy too many positions at once
-- Prefer to buy 2-3 strong recommendations rather than 5-6 weak ones
 
 ## SELL Decisions
 - SELL existing positions if:
-  - The stock is no longer in the current recommendations (sentiment changed)
   - You need to free up cash for better opportunities
   - Position has significant unrealized gains (take profits)
   - Position has significant unrealized losses (cut losses)
-- Calculate realized P&L when selling
 
 ## HOLD Decisions
 - HOLD existing positions that still have positive outlook
 - HOLD if the stock appears in current recommendations and is performing reasonably
+
+## DO_NOTHING Decisions
+- DO_NOTHING if there is insufficient data or unclear market conditions
+- DO_NOTHING if no action is warranted based on current analysis
 
 ## Risk Management
 - Be conservative with cash - don't deploy all cash at once
@@ -54,7 +56,7 @@ Then decide BUY, SELL, or HOLD for each ticker.
 # Output Format
 Return a structured list of trade decisions with:
 - ticker: Stock symbol
-- action: "BUY", "SELL", or "HOLD"
+- action: "BUY", "SELL", "HOLD", or "DO_NOTHING"
 - quantity: Number of shares (0 for HOLD)
 - reason: Brief explanation (1-2 sentences)
 """
@@ -115,7 +117,7 @@ Return a structured list of trade decisions with:
 
 ---
 
-Based on the above data, make your BUY/SELL/HOLD decisions for this week.
+Based on the above data, make your BUY/SELL/HOLD/DO_NOTHING decisions for this week.
 Consider both new recommendations and existing positions.
 """
         return prompt

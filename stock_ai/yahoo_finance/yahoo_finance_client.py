@@ -114,6 +114,20 @@ class YahooFinanceClient:
             print(f"Error fetching current price for {ticker}: {e}")
             return float("nan")
 
+    def get_current_prices_batch(self, tickers: list[str]) -> dict[str, float]:
+        """Get current prices for multiple tickers efficiently.
+        
+        Args:
+            tickers: List of ticker symbols
+            
+        Returns:
+            Dictionary mapping ticker to current price
+        """
+        prices = {}
+        for ticker in tickers:
+            prices[ticker] = self.get_current_price(ticker)
+        return prices
+
 # Example usage:
 # cl = YahooFinanceClient()
 # price = cl.get_current_price("^GSPC")
