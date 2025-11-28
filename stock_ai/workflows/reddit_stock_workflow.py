@@ -8,10 +8,10 @@ from stock_ai.agents.reddit_agents.news_agent import NewsAgent
 from stock_ai.agents.reddit_agents.dd_agent import DDAgent
 from stock_ai.agents.reddit_agents.yolo_agent import YoloAgent
 from stock_ai.workflows.persistence.sql_alchemy_persistence import SqlAlchemyPersistence
-from stock_ai.workflows.workflow_base import StepFn, Step, Workflow
+from stock_ai.workflows.workflow_base import StepFn, Step, StepFnFactories, StepFns, Workflow
 from stock_ai.notifiers.discord.reddit_stock_notifier import send_stock_recommendations_to_discord
 from stock_ai.workflows.common.api_clients import get_openai_client, get_reddit_scraper
-from stock_ai.workflows.common.utils import idempotency_check, step_fn_dc_factory, step_fn_factory_dc_factory
+from stock_ai.workflows.common.utils import idempotency_check
 from stock_ai.workflows.common.common_step_fns import s_insert_run_metadata
 
 from dataclasses import asdict
@@ -204,12 +204,12 @@ def init_workflow(run_id: str, persistence: SqlAlchemyPersistence) -> Workflow:
         run_id=run_id,
         persistence=persistence,
         steps=[
-            Step("insert run metadata", step_fn_dc_factory([s_insert_run_metadata])),
-            Step("scrape reddit", step_fn_dc_factory([s_scrape])),
-            Step("filter posts", step_fn_dc_factory([s_filter])),
-            Step("run stock agents", step_fn_factory_dc_factory([a_news_factory, a_dd_factory, a_yolo_factory])),
-            Step("run stock picker agent", step_fn_factory_dc_factory([a_picker_factory])),
-            Step("merge and notify discord", step_fn_dc_factory([s_notify_discord])),
+            Step("insert run metadata", StepFns(functions=[s_insert_run_metadata])),
+            Step("scrape reddit", StepFns(functions=[s_scrape])),
+            Step("filter posts", StepFns(functions=[s_filter])),
+            Step("run stock agents", StepFnFactories(factories=[a_news_factory, a_dd_factory, a_yolo_factory])),
+            Step("run stock picker agent", StepFnFactories(factories=[a_picker_factory])),
+            Step("merge and notify discord", StepFns(functions=[s_notify_discord])),
         ]
     )
     return reddit_stock_workflow
