@@ -1,16 +1,7 @@
-"""Daily performance tracking workflow.
-
-This workflow runs daily (Tuesday-Friday) to:
-1. Update position prices with current market data
-2. Create daily performance snapshot
-3. Send Discord notification with portfolio status
-
-Skips Monday since weekly trade workflow runs on Monday.
-"""
-
+import os
 from stock_ai.yahoo_finance.yahoo_finance_client import YahooFinanceClient
 from stock_ai.workflows.persistence.sql_alchemy_persistence import SqlAlchemyPersistence
-from stock_ai.workflows.workflow_base import StepFn, StepFns, Step, Workflow
+from stock_ai.workflows.workflow_base import StepFns, Step, Workflow
 from stock_ai.workflows.common.utils import idempotency_check
 from stock_ai.workflows.common.common_step_fns import s_insert_run_metadata
 from stock_ai.notifiers.discord.trade_notifier import send_trade_summary_to_discord
@@ -20,7 +11,7 @@ from datetime import datetime, timezone
 
 
 # Configuration
-DEFAULT_PORTFOLIO_NAME = "weekly_trade_bot"
+PORTFOLIO_NAME = os.getenv("PORTFOLIO_NAME") or "weekly_trade_bot"
 
 
 def s_update_position_prices(persistence: SqlAlchemyPersistence, run_id: str) -> None:
@@ -35,11 +26,11 @@ def s_update_position_prices(persistence: SqlAlchemyPersistence, run_id: str) ->
     # 1. Get portfolio
     portfolio_rows = persistence.query(
         text("SELECT * FROM portfolios WHERE name = :name"),
-        {"name": DEFAULT_PORTFOLIO_NAME}
+        {"name": PORTFOLIO_NAME}
     )
     
     if not portfolio_rows or len(portfolio_rows) == 0:
-        print(f"Portfolio '{DEFAULT_PORTFOLIO_NAME}' not found")
+        print(f"Portfolio '{PORTFOLIO_NAME}' not found")
         return
 
     portfolio_id = portfolio_rows[0].id
@@ -99,11 +90,11 @@ def s_create_performance_snapshot(persistence: SqlAlchemyPersistence, run_id: st
     # 1. Get portfolio
     portfolio_rows = persistence.query(
         text("SELECT * FROM portfolios WHERE name = :name"),
-        {"name": DEFAULT_PORTFOLIO_NAME}
+        {"name": PORTFOLIO_NAME}
     )
     
     if not portfolio_rows or len(portfolio_rows) == 0:
-        print(f"Portfolio '{DEFAULT_PORTFOLIO_NAME}' not found")
+        print(f"Portfolio '{PORTFOLIO_NAME}' not found")
         return
 
     portfolio = portfolio_rows[0]
@@ -200,11 +191,11 @@ def s_notify_discord(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     # Get portfolio
     portfolio_rows = persistence.query(
         text("SELECT * FROM portfolios WHERE name = :name"),
-        {"name": DEFAULT_PORTFOLIO_NAME}
+        {"name": PORTFOLIO_NAME}
     )
     
     if not portfolio_rows or len(portfolio_rows) == 0:
-        print(f"Portfolio '{DEFAULT_PORTFOLIO_NAME}' not found")
+        print(f"Portfolio '{PORTFOLIO_NAME}' not found")
         return
 
     portfolio = portfolio_rows[0]

@@ -1,3 +1,4 @@
+import os
 from stock_ai.agents.trade_agents.trade_agent import TradeAgent
 from stock_ai.yahoo_finance.yahoo_finance_client import YahooFinanceClient
 from stock_ai.workflows.persistence.sql_alchemy_persistence import SqlAlchemyPersistence
@@ -14,8 +15,8 @@ import math
 
 
 # Configuration
-DEFAULT_PORTFOLIO_NAME = "weekly_trade_bot"
-DEFAULT_INITIAL_CAPITAL = 10000.00
+DEFAULT_PORTFOLIO_NAME = os.getenv("PORTFOLIO_NAME") or "weekly_trade_bot"
+DEFAULT_INITIAL_CAPITAL = float(os.getenv("INITIAL_CAPITAL") or 10000.00)
 
 
 def s_prepare_trade_inputs(persistence: SqlAlchemyPersistence, run_id: str) -> None:
