@@ -27,6 +27,8 @@ jobs:
       DB_TARGET: REMOTE_GH_WORKER
       DATABASE_URL_REMOTE_GH_WORKER: ${{ secrets.DATABASE_URL_REMOTE_GH_WORKER }}
       PYTHONUNBUFFERED: "1"
+      ENVIRONMENT: ${{ vars.ENVIRONMENT }}
+      TEST_RUN_ID: ${{ vars.TEST_RUN_ID }}
 
     steps:
       - name: Checkout

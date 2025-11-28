@@ -1,3 +1,4 @@
+import os
 from dotenv import load_dotenv
 import time
 from datetime import date, timedelta
@@ -26,11 +27,15 @@ def main():
             "final_recommendations": FinalRecommendation
         },
     )
+    is_test_env = os.getenv("ENVIRONMENT") == "TEST" 
+
     # use sunday + 1 day (Monday) so the trade workflow is easier to fetch the id
     # e.g., 20251123 is Sunday, so this becomes 20251124 (Monday)
     today_plus_one = (date.today() + timedelta(days=1)).strftime("%Y%m%d") 
     run_id = RunIdType.REDDIT_STOCK_RECOMMENDATION.value + "_" + today_plus_one
-    # run_id = RunIdType.TEST_RUN.value + "_" + "20251126-1"
+    # run_id = RunIdType.TEST_RUN_TRADE.value + "_" + "20251126-1"
+    if is_test_env:
+        run_id = os.getenv("TEST_RUN_ID", run_id)
 
     init_workflow(run_id, persistence).run()
     e = time.perf_counter()
