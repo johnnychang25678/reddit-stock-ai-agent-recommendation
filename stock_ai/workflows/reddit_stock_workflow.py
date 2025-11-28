@@ -8,34 +8,17 @@ from stock_ai.agents.reddit_agents.news_agent import NewsAgent
 from stock_ai.agents.reddit_agents.dd_agent import DDAgent
 from stock_ai.agents.reddit_agents.yolo_agent import YoloAgent
 from stock_ai.workflows.persistence.sql_alchemy_persistence import SqlAlchemyPersistence
-from stock_ai.workflows.workflow_base import StepFn, StepFns, StepFnFactory, StepFnFactories, Step, Workflow
+from stock_ai.workflows.workflow_base import StepFn, Step, StepFnFactories, StepFns, Workflow
 from stock_ai.notifiers.discord.reddit_stock_notifier import send_stock_recommendations_to_discord
 from stock_ai.workflows.common.api_clients import get_openai_client, get_reddit_scraper
+from stock_ai.workflows.common.utils import idempotency_check
+from stock_ai.workflows.common.common_step_fns import s_insert_run_metadata
 
 from dataclasses import asdict
 from sqlalchemy import text, bindparam
 
-def _idempotency_check(persistence: SqlAlchemyPersistence, run_id: str, table: str) -> bool:
-    if run_id.startswith("no-idempotency-"):
-        # disable idempotency check
-        print("skip idempotency check...")
-        return False
-    print(f"Checking if {table} already exists for run_id {run_id}...")
-    existing = persistence.get(table, run_id=run_id)
-    # will return a list of rows if any exist with this run_id
-    return (existing is not None) and (isinstance(existing, list) and len(existing) > 0)
-
-def s_insert_run_metadata(persistence: SqlAlchemyPersistence, run_id: str) -> None:
-    if _idempotency_check(persistence, run_id, "run_metadata"):
-        print(f"Run metadata already exists for run_id {run_id}, skipping insert step")
-        return
-    row = {
-        "run_id": run_id,
-    }
-    persistence.set("run_metadata", [row])
-
 def s_scrape(persistence: SqlAlchemyPersistence, run_id: str) -> None:
-    if _idempotency_check(persistence, run_id, "reddit_posts"):
+    if idempotency_check(persistence, run_id, "reddit_posts"):
         print(f"Posts already scraped for run_id {run_id}, skipping scrape step")
         return
 
@@ -45,7 +28,7 @@ def s_scrape(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     cut_off_days = 7
 
     posts = reddit_scraper.scrape(
-        subreddit_name, flairs_want, 
+        subreddit_name, flairs_want,
         skip_empty_selftext=True, cut_off_days=cut_off_days)
 
     # RedditPost model to dict rows
@@ -59,7 +42,7 @@ def s_scrape(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     persistence.set("reddit_posts", rows)
 
 def s_filter(persistence: SqlAlchemyPersistence, run_id: str) -> None:
-    if _idempotency_check(persistence, run_id, "reddit_filtered_posts"):
+    if idempotency_check(persistence, run_id, "reddit_filtered_posts"):
         print(f"Posts already filtered for run_id {run_id}, skipping filter step")
         return
 
@@ -155,7 +138,7 @@ def _make_picker_step_fn(stock_recommendations: list[StockRecommendation]) -> li
 #-------- End of factory functions --------
 
 def a_news_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[StepFn]:
-    if _idempotency_check(persistence, run_id, "news_recommendations"):
+    if idempotency_check(persistence, run_id, "news_recommendations"):
         print(f"News recommendations already generated for run_id {run_id}, skipping news agent step")
         return []
     flair = "News"
@@ -165,7 +148,7 @@ def a_news_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[Step
     return step_fns
 
 def a_dd_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[StepFn]:
-    if _idempotency_check(persistence, run_id, "dd_recommendations"):
+    if idempotency_check(persistence, run_id, "dd_recommendations"):
         print(f"DD recommendations already generated for run_id {run_id}, skipping DD agent step")
         return []
     flair = "DD"
@@ -175,7 +158,7 @@ def a_dd_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[StepFn
     return step_fns
 
 def a_yolo_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[StepFn]:
-    if _idempotency_check(persistence, run_id, "yolo_recommendations"):
+    if idempotency_check(persistence, run_id, "yolo_recommendations"):
         print(f"YOLO recommendations already generated for run_id {run_id}, skipping YOLO agent step")
         return []
     flair = "YOLO"
@@ -185,7 +168,7 @@ def a_yolo_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[Step
     return step_fns
 
 def a_picker_factory(persistence: SqlAlchemyPersistence, run_id: str) -> list[StepFn]:
-    if _idempotency_check(persistence, run_id, "final_recommendations"):
+    if idempotency_check(persistence, run_id, "final_recommendations"):
         print(f"Final recommendations already generated for run_id {run_id}, skipping Picker agent step")
         return []
     text_clause = text(
@@ -216,24 +199,17 @@ def s_notify_discord(persistence: SqlAlchemyPersistence, run_id: str) -> None:
         final_recs.append(asdict(fr_dc))
     send_stock_recommendations_to_discord(final_recs)
 
-# factories to generate dataclasses for Step. Use dataclass because it's easier to use isinstance() in base workflow.
-def step_fn_dc_factory(funcs: list[StepFn]) -> StepFns:
-    return StepFns(functions=funcs)
-
-def step_fn_factory_dc_factory(factories: list[StepFnFactory]) -> StepFnFactories:
-    return StepFnFactories(factories=factories)
-
 def init_workflow(run_id: str, persistence: SqlAlchemyPersistence) -> Workflow:
     reddit_stock_workflow = Workflow(
         run_id=run_id,
         persistence=persistence,
         steps=[
-            Step("insert run metadata", step_fn_dc_factory([s_insert_run_metadata])),
-            Step("scrape reddit", step_fn_dc_factory([s_scrape])),
-            Step("filter posts", step_fn_dc_factory([s_filter])),
-            Step("run stock agents", step_fn_factory_dc_factory([a_news_factory, a_dd_factory, a_yolo_factory])),
-            Step("run stock picker agent", step_fn_factory_dc_factory([a_picker_factory])),
-            Step("merge and notify discord", step_fn_dc_factory([s_notify_discord])),
+            Step("insert run metadata", StepFns(functions=[s_insert_run_metadata])),
+            Step("scrape reddit", StepFns(functions=[s_scrape])),
+            Step("filter posts", StepFns(functions=[s_filter])),
+            Step("run stock agents", StepFnFactories(factories=[a_news_factory, a_dd_factory, a_yolo_factory])),
+            Step("run stock picker agent", StepFnFactories(factories=[a_picker_factory])),
+            Step("merge and notify discord", StepFns(functions=[s_notify_discord])),
         ]
     )
     return reddit_stock_workflow

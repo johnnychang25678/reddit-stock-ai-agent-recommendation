@@ -48,6 +48,7 @@ def send_stock_recommendations_to_discord(recs: list[dict]):
     for url in webhook_urls_list:
         discord_client = DiscordClient(url)
         week_str = time.strftime("%Y-%m-%d", time.localtime(time.time() - 7*24*3600))
+        week_str += " to " + time.strftime("%Y-%m-%d", time.localtime())
         
         # Build header (same for all messages)
         header_line = f"## Reddit Stock AI Recommendations for week of {week_str}"

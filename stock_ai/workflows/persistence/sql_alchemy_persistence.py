@@ -1,5 +1,5 @@
 from typing import Any, Mapping
-from sqlalchemy import Row, select, insert, text
+from sqlalchemy import Row, select, insert, text, CursorResult
 from sqlalchemy.sql.elements import TextClause
 
 from stock_ai.db.session import get_session
@@ -76,3 +76,10 @@ class SqlAlchemyPersistence(Persistence):
         with get_session() as s:
             res = s.execute(text_clause, params)
             return list(res.fetchall())
+
+    def write(self, text_clause: TextClause, params: dict) -> int:
+        """Execute an UPDATE/INSERT/DELETE query and return rows affected."""
+        with get_session() as s:
+            res = s.execute(text_clause, params)
+            s.commit()
+            return res.rowcount # type: ignore[attr-defined]
