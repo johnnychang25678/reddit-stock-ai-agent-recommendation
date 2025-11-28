@@ -1,3 +1,4 @@
+import os
 from dotenv import load_dotenv
 import time
 from datetime import date
@@ -23,9 +24,12 @@ def main():
             "performance_snapshots": PerformanceSnapshot,
         },
     )
+    is_test_env = os.getenv("ENVIRONMENT") == "TEST" 
     
     run_id = RunIdType.DAILY_PERF.value + "_" + date.today().strftime("%Y%m%d")
     # run_id = RunIdType.TEST_DAILY_PERF.value + "_" + "20251126-1"
+    if is_test_env:
+        run_id = os.getenv("TEST_RUN_ID", run_id)
     
     print(f"Starting daily performance workflow with run_id: {run_id}")
     init_workflow(run_id, persistence).run()

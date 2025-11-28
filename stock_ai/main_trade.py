@@ -1,3 +1,4 @@
+import os
 from dotenv import load_dotenv
 import time
 from datetime import date
@@ -28,10 +29,11 @@ def main():
             "trade_inputs": TradeInput,
         },
     )
-    
-    # Generate run_id for trade workflow
+    is_test_env = os.getenv("ENVIRONMENT") == "TEST" 
     run_id = RunIdType.REDDIT_STOCK_TRADE.value + "_" + date.today().strftime("%Y%m%d")
     # run_id = RunIdType.TEST_RUN_TRADE.value + "_" + "20251126-1"
+    if is_test_env:
+        run_id = os.getenv("TEST_RUN_ID", run_id)
     
     print(f"Starting weekly trade workflow with run_id: {run_id}")
     init_workflow(run_id, persistence).run()

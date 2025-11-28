@@ -34,6 +34,8 @@ def s_prepare_trade_inputs(persistence: SqlAlchemyPersistence, run_id: str) -> N
 
     # 1. Get final recommendations from most recent reddit workflow run
     stock_trade_run_id = RunIdType.REDDIT_STOCK_RECOMMENDATION.value + "_" + run_id.split("_")[-1]
+    if os.getenv("ENVIRONMENT") == "TEST":
+        stock_trade_run_id = os.getenv("TEST_RUN_ID", stock_trade_run_id)
     final_recs = persistence.get("final_recommendations", run_id=stock_trade_run_id)
     # test_run_id = RunIdType.TEST_RUN.value + "_" + run_id.split("_")[-1]
     # final_recs = persistence.get("final_recommendations", run_id=test_run_id)

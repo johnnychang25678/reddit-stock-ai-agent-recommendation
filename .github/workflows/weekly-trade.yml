@@ -25,6 +25,8 @@ jobs:
       PYTHONUNBUFFERED: "1"
       PORTFOLIO_NAME: ${{ vars.PORTFOLIO_NAME }}
       INITIAL_CAPITAL: ${{ vars.INITIAL_CAPITAL }}
+      ENVIRONMENT: ${{ vars.ENVIRONMENT }}
+      TEST_RUN_ID: ${{ vars.TEST_RUN_ID }}
 
     steps:
       - name: Checkout
