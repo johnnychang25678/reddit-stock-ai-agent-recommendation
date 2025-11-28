@@ -1,28 +1,23 @@
-name: Reddit stock weekly
+name: Daily Performance Tracker
 
 on:
   workflow_dispatch: {}         # allow manual runs
   schedule:
-    # Run every Sunday at 9am US/Pacific (12:00pm US/Eastern)
-    # 16:00 UTC = 9am PDT (Mar–Nov), 17:00 UTC = 9am PST (Nov–Mar)
-    # - cron: '0 16 * * SUN'
-    - cron: '0 17 * * SUN'
+    # Run Tuesday-Friday at 4:30pm US/Eastern (30 minutes after market close)
+    # 21:30 UTC = 4:30pm EST (Nov–Mar), 20:30 UTC = 4:30pm EDT (Mar–Nov)
+    - cron: '30 21 * * TUE-FRI'
 
 permissions:
   contents: read
 
 concurrency:
-  group: reddit-stock-weekly
+  group: daily-performance-tracker
   cancel-in-progress: false
 
 jobs:
   run:
     runs-on: ubuntu-latest
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
-      REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
-      REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
       DISCORD_WEBHOOK_URL_TEST: ${{ secrets.DISCORD_WEBHOOK_URL_TEST }}
       DB_TARGET: REMOTE_GH_WORKER
       DATABASE_URL_REMOTE_GH_WORKER: ${{ secrets.DATABASE_URL_REMOTE_GH_WORKER }}
@@ -41,9 +36,8 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Sync deps
-        # Works with pyproject.toml / uv.lock; remove --all-extras if unused
         run: uv sync --all-extras
 
-      - name: Run weekly workflow
+      - name: Run daily performance workflow
         run: |
-            uv run -m stock_ai.main
+          uv run -m stock_ai.main_daily_performance
