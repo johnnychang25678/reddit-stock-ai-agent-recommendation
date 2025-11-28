@@ -1,5 +1,3 @@
-"""Main entry point for the weekly trade workflow."""
-
 from dotenv import load_dotenv
 import time
 from datetime import date
@@ -32,9 +30,8 @@ def main():
     )
     
     # Generate run_id for trade workflow
-    # Format: REDDIT_STOCK_TRADE_YYYYMMDD
-    # run_id = RunIdType.REDDIT_STOCK_TRADE.value + "_" + date.today().strftime("%Y%m%d")
-    run_id = RunIdType.TEST_RUN_TRADE.value + "_" + "20251126-1"
+    run_id = RunIdType.REDDIT_STOCK_TRADE.value + "_" + date.today().strftime("%Y%m%d")
+    # run_id = RunIdType.TEST_RUN_TRADE.value + "_" + "20251126-1"
     
     print(f"Starting weekly trade workflow with run_id: {run_id}")
     init_workflow(run_id, persistence).run()

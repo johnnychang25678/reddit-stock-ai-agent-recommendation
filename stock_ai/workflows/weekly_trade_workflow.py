@@ -1,21 +1,12 @@
-"""Weekly trade bot workflow - Simplified version.
-
-This workflow:
-1. Prepares trade inputs (recommendations + prices + portfolio state)
-2. Calls TradeAgent to decide + executes trades atomically
-3. Sends Discord notification
-"""
-
 from stock_ai.agents.trade_agents.trade_agent import TradeAgent
 from stock_ai.yahoo_finance.yahoo_finance_client import YahooFinanceClient
 from stock_ai.workflows.persistence.sql_alchemy_persistence import SqlAlchemyPersistence
-from stock_ai.workflows.workflow_base import StepFn, StepFns, Step, Workflow
+from stock_ai.workflows.workflow_base import StepFns, Step, Workflow
 from stock_ai.workflows.common.api_clients import get_openai_client
 from stock_ai.workflows.common.utils import idempotency_check
 from stock_ai.workflows.common.common_step_fns import s_insert_run_metadata
 from stock_ai.notifiers.discord.trade_notifier import send_trade_summary_to_discord
 from stock_ai.workflows.run_id_generator import RunIdType
-from stock_ai.agents.stock_plan_agents.data_classes import FinalRecommendation
 
 from sqlalchemy import text
 from datetime import datetime, timezone
@@ -32,19 +23,19 @@ def s_prepare_trade_inputs(persistence: SqlAlchemyPersistence, run_id: str) -> N
 
     This step:
     - Fetches final recommendations from reddit workflow
-    - Fetches current market prices for those tickers
     - Fetches portfolio state (cash balance, existing positions)
-    - Stores everything needed for the agent step
+    - Fetches current market prices for recommended stocks and existing positions
+    - Stores everything needed for the next agent step
     """
     if idempotency_check(persistence, run_id, "trade_inputs"):
         print(f"Trade inputs already prepared for run_id {run_id}, skipping")
         return
 
     # 1. Get final recommendations from most recent reddit workflow run
-    # stock_trade_run_id = RunIdType.REDDIT_STOCK_RECOMMENDATION.value + "_" + run_id.split("_")[-1]
-    # final_recs = persistence.get("final_recommendations", run_id=stock_trade_run_id)
-    test_run_id = RunIdType.TEST_RUN.value + "_" + run_id.split("_")[-1]
-    final_recs = persistence.get("final_recommendations", run_id=test_run_id)
+    stock_trade_run_id = RunIdType.REDDIT_STOCK_RECOMMENDATION.value + "_" + run_id.split("_")[-1]
+    final_recs = persistence.get("final_recommendations", run_id=stock_trade_run_id)
+    # test_run_id = RunIdType.TEST_RUN.value + "_" + run_id.split("_")[-1]
+    # final_recs = persistence.get("final_recommendations", run_id=test_run_id)
 
 
     if not final_recs or len(final_recs) == 0:
@@ -165,12 +156,12 @@ def s_prepare_trade_inputs(persistence: SqlAlchemyPersistence, run_id: str) -> N
     print(f"Prepared trade inputs: {len(recs_list)} recommendations, {len(prices)} prices, {len(positions_list)} positions")
 
 
-def s_trade_decision_and_execute(persistence: SqlAlchemyPersistence, run_id: str) -> None:
+def a_trade_decision_and_execute(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     """Step 2: Agent makes decisions and executes trades atomically.
 
     This step:
     - Calls TradeAgent to make BUY/SELL/HOLD/DO_NOTHING decisions
-    - Immediately executes all trades
+    - Executes trades based on those decisions
     - Updates positions, portfolio, and creates performance snapshot
     - All DB updates happen in this single step for atomicity
     """
@@ -216,7 +207,7 @@ def s_trade_decision_and_execute(persistence: SqlAlchemyPersistence, run_id: str
 
     print(f"Agent generated {len(decisions.decisions)} decisions")
 
-    # 3. Execute trades atomically
+    # 3. Execute trades
     trades = []
     # this map will be used as a final state of positions after all trades
     # will delete all positions in db and recreate based on this map
@@ -401,7 +392,7 @@ def s_trade_decision_and_execute(persistence: SqlAlchemyPersistence, run_id: str
 
     print(f"Portfolio updated: Cash=${cash_balance:.2f}, Positions=${positions_value:.2f}, Total=${total_value:.2f}")
 
-    # 7. Track S&P 500 benchmark
+    # 7. Get current S&P 500 price
     yf_client = YahooFinanceClient()
     sp500_snapshot = yf_client.get_yf_snapshot("^GSPC")
     sp500_current = sp500_snapshot.price
@@ -414,7 +405,7 @@ def s_trade_decision_and_execute(persistence: SqlAlchemyPersistence, run_id: str
     total_pnl = total_value - initial_capital
     roi_percent = (total_pnl / initial_capital) * 100
 
-    # Get initial S&P 500 value
+    # Get initial S&P 500 value (the first value recorded for this portfolio)
     text_clause = text(
         "SELECT sp500_initial_value FROM performance_snapshots "
         "WHERE portfolio_id = :portfolio_id "
@@ -427,7 +418,7 @@ def s_trade_decision_and_execute(persistence: SqlAlchemyPersistence, run_id: str
     else:
         sp500_initial = sp500_current
 
-    sp500_return_percent = ((sp500_current - sp500_initial) / sp500_initial) * 100 if sp500_initial > 0 else 0.0
+    sp500_return_percent = ((sp500_current - sp500_initial) / sp500_initial) * 100
     alpha = roi_percent - sp500_return_percent
 
     snapshot_row = {
@@ -487,7 +478,7 @@ def init_workflow(run_id: str, persistence: SqlAlchemyPersistence) -> Workflow:
         steps=[
             Step("insert run metadata", StepFns(functions=[s_insert_run_metadata])),
             Step("prepare trade inputs", StepFns(functions=[s_prepare_trade_inputs])),
-            Step("trade decision and execute", StepFns(functions=[s_trade_decision_and_execute])),
+            Step("trade decision and execute", StepFns(functions=[a_trade_decision_and_execute])),
             Step("notify discord", StepFns(functions=[s_notify_discord])),
         ]
     )
