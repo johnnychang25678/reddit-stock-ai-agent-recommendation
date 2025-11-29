@@ -1,21 +1,28 @@
 # Reddit-Posts-Stock-AI-Recommendation-System
 
-An AI-powered stock analysis and recommendation system that scrapes Reddit's `r/wallstreetbets`, analyzes posts using AI agents, and generates a list of stock BUY recommendations.
+An AI-powered stock analysis and recommendation system that:
+- Scrapes Reddit's `r/wallstreetbets`, analyzes posts using AI agents, and generates a list of stock BUY recommendations.
+- Based on the recommendations, a trader AI agent make decisions on which stocks to buy/sell for a virtual portfolio.
+- A daily cron job that tracks the portfolio performance
 
-A cron job is set up to run the workflow and send results to Discord every week. Please be aware - the recommendation is **NOT** a financial advice, use it at your own risk.
+
+Please be aware - the recommendation is **NOT** a financial advice, use it at your own risk.
 
 I am also hoping the workflow engine and AI agent framework can be adapted for other use cases in the future.
 
 ## Join the Discord Channel
 If you want to receive the stock recommendations directly, please join my Discord: [https://discord.gg/XxP8z5dxFX](https://discord.gg/XxP8z5dxFX)
 
-It's now still under testing and development, but you can see the recommendations in the `#stock-recommendations` channel.
+You can see the recommendations and the daily performance updates of the virtual portfolio in the `#stock-recommendations` channel.
 
 Feel free to share your feedbacks and suggestions!
 
 ## Overview
 
-Reddit-Posts-Stock-AI-Recommendation-System combines social media sentiment analysis with real-time web research to provide curated stock recommendations. It scrapes Reddit posts from `r/wallstreetbets`, processes them through specialized AI agents with web search capabilities, and uses a senior picker agent to select the highest-conviction opportunities from the pool of recommendations.
+The system runs on three github workflows:
+1. **Reddit Stock Recommendation Workflow**: Runs weekly to scrape Reddit posts, analyze them with AI agents, generate stock BUY recommendations, and send them to Discord
+2. **Weekly Trade Workflow**: Runs weekly to make buy/sell/hold decisions based on the latest recommendations and update the virtual portfolio, then send the trade summary to Discord
+3. **Daily Performance Workflow**: Runs daily to track the portfolio performance and send updates to Discord
 
 ## Features
 
@@ -31,16 +38,36 @@ Reddit-Posts-Stock-AI-Recommendation-System combines social media sentiment anal
   - Selects the top 1-3 highest-conviction picks
   - Provides rationale for final selections
 
-- **Real-Time Intelligence**: Each agent leverages OpenAI's web search tool to:
-  - Verify recent catalysts and earnings news
-  - Cross-check Reddit claims with authoritative sources
-  - Gather diverse perspectives from multiple web sources
-  - Ensure recommendations are grounded in current market reality
+- **Trading Decision AI Agent**:
+  - Reviews the latest stock recommendations, current portfolio holdings and current market prices
+  - Makes buy/sell/hold decisions based on recommendation confidence levels and portfolio diversification
+  - Generates a trade summary with reasoning for each action
+  - Updates the virtual portfolio based on trades executed
+  - Caveat: Trades are simulated using current prices from the Yahoo Finance API and may not reflect actual broker execution prices
 
-- **Discord Integration**: Automatically sends formatted recommendations to Discord channels
+- **Memory Persistence**: Uses PostgreSQL (via Supabase) to store workflow state, Reddit posts, agent analyses, recommendations, portfolio data, trades, and performance metrics, etc.
+  - Enables tracking of recommendation performance over time
+  - Facilitates idempotent workflow execution
+
+- **Workflow Engine**: A modular and extensible workflow engine that orchestrates the entire analysis pipeline
+  - Supports parallel execution of AI agents
+  - Idempotent step processing with SQL-based persistence
+  - Easy to add new agents or data sources in the future
+
+
+- **Discord Integration**: Automatically sends recommendations, trade summaries, and portfolio performance updates to Discord channels
 
 Example Discord Output:
 ![Discord Output Example](readme_resources/example_discord_v_0.1.0.png)
+
+
+![Discord Output Example 2](readme_resources/discord_trade_example.png)
+
+
+## Tech Stack
+Python, PRAW (Reddit API), OpenAI GPT-5 with Web Search, Yahoo Finance API, PostgreSQL (Supabase), Discord API, Alembic (DB migrations), GitHub Actions
+
+(I roll my own workflow engine and AI agent framework!)
 
 ## Architecture
 
@@ -147,40 +174,9 @@ flowchart TB
     style External fill:#0f172a,stroke:#64748b,stroke-width:2px,color:#94a3b8
 ```
 
-### Core Components
-
-- **Reddit Scraper** (`stock_ai/reddit/`): Fetches posts from `r/wallstreetbets` using `PRAW`
-- **AI Agents** (`stock_ai/agents/`): Specialized LLM agents with web search capabilities
-  - **Reddit Agents**: News, DD, and YOLO agents that analyze posts and perform web research
-  - **Stock Picker Agent**: Senior investor agent that selects top picks from all recommendations
-  - Currently has hard dependency on OpenAI's GPT-5 model and Response API with web search tool
-- **Workflow Engine** (`stock_ai/workflows/`): Orchestrates the entire analysis pipeline
-  - A generic, extensible workflow engine that can be adapted for other use cases
-  - Supports parallel execution of agents and idempotent step processing
-  - Modular design for easy addition of new agents or data sources
-  - SQL-based persistence layer for tracking workflow state
-- **Discord Notifier** (`stock_ai/notifiers/`): Sends formatted results to Discord
-  - Will be extended to support other notification channels in the future, such as email
-
-### Workflow Pipeline
-
-1. **Data Collection**: Scrape recent posts from r/wallstreetbets (News, DD, YOLO flairs)
-2. **Post Filtering**: Filter posts by engagement metrics and content quality
-3. **AI Analysis with Web Research**: Run specialized agents in parallel on filtered posts
-   - Each agent analyzes posts in their category (News/DD/YOLO)
-   - Agents perform real-time web searches to verify claims and gather market intelligence
-   - Generate initial BUY recommendations with confidence levels
-4. **Stock Selection**: Stock Picker agent evaluates all recommendations
-   - Reviews investment thesis quality and risk profiles
-   - Applies institutional investor criteria to select top 1-3 picks
-   - Provides rationale for final selections
-5. **Discord Notification**: Send curated recommendations to Discord channel
-
-
 ## Roadmap
-- [ ] Develop evaluation framework to measure performance of recommendations over time
-- [ ] Integrate email notification channel so it becomes a newsletter system
-
+- [X] Develop evaluation framework to measure performance of recommendations over time
+- Any suggestions are welcome!
 
 ## How to
 
