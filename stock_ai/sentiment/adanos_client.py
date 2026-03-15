@@ -41,7 +41,7 @@ class TrendingTicker:
 class AdanosClient:
     """Fetch stock sentiment from the Adanos API.
 
-    Requires an API key. Get a free one (250 req/month) at https://api.adanos.org
+    Requires an API key. Get a free one (250 req/month) at https://api.adanos.org/docs
 
     Set via env var ``ADANOS_API_KEY`` or pass directly.
     """
