@@ -109,7 +109,7 @@ class AdanosClient:
             buzz_score=data.get("buzz_score"),
             sentiment_score=data.get("sentiment_score"),
             trend=data.get("trend"),
-            mentions=data.get("total_mentions", 0) or data.get("trade_count", 0),
+            mentions=data.get("mentions", data.get("total_mentions", 0)) or data.get("trade_count", 0),
             bullish_pct=data.get("bullish_pct"),
             bearish_pct=data.get("bearish_pct"),
             extra={
@@ -122,6 +122,7 @@ class AdanosClient:
                     "buzz_score",
                     "sentiment_score",
                     "trend",
+                    "mentions",
                     "total_mentions",
                     "trade_count",
                     "bullish_pct",

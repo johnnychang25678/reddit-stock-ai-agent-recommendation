@@ -160,6 +160,53 @@ class TestSentimentEnricher:
         assert "no sentiment data" in ctx
 
 
+class TestAdanosClient:
+    def test_prefers_canonical_mentions_field(self):
+        client = AdanosClient(api_key="sk_live_test")
+        response = MagicMock()
+        response.json.return_value = {
+            "ticker": "TSLA",
+            "found": True,
+            "buzz_score": 72,
+            "sentiment_score": 0.23,
+            "trend": "rising",
+            "mentions": 342,
+            "total_mentions": 999,
+            "bullish_pct": 61,
+            "bearish_pct": 22,
+        }
+
+        with patch.object(client._http, "get", return_value=response):
+            response.raise_for_status.return_value = None
+            sentiment = client.get_stock_sentiment("TSLA", platform="reddit", days=7)
+
+        assert sentiment.mentions == 342
+        assert "mentions" not in sentiment.extra
+        assert "total_mentions" not in sentiment.extra
+        client.close()
+
+    def test_falls_back_to_legacy_total_mentions_field(self):
+        client = AdanosClient(api_key="sk_live_test")
+        response = MagicMock()
+        response.json.return_value = {
+            "ticker": "TSLA",
+            "found": True,
+            "buzz_score": 72,
+            "sentiment_score": 0.23,
+            "trend": "rising",
+            "total_mentions": 342,
+            "bullish_pct": 61,
+            "bearish_pct": 22,
+        }
+
+        with patch.object(client._http, "get", return_value=response):
+            response.raise_for_status.return_value = None
+            sentiment = client.get_stock_sentiment("TSLA", platform="reddit", days=7)
+
+        assert sentiment.mentions == 342
+        client.close()
+
+
 # --- Workflow ticker extraction ---
 
 class TestTickerExtraction:
