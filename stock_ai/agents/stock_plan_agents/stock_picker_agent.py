@@ -5,6 +5,10 @@ from stock_ai.agents.reddit_agents.data_classes import StockRecommendation
 from stock_ai.agents.stock_plan_agents.pydantic_models import StockRecommendationTickerList
 
 class StockPickerAgent(BaseAgent):
+    def __init__(self, open_ai_client, sentiment_context: str = ""):
+        super().__init__(open_ai_client)
+        self.sentiment_context = sentiment_context
+
     @property
     def system_prompt(self) -> str:
         return f"""# Role & Objective
@@ -49,6 +53,12 @@ When reviewing each recommendation, assess:
    - Which stocks offer the best risk-reward balance?
    - Are there redundant picks (e.g., multiple stocks in same sector/theme)?
 
+5. **Cross-Platform Sentiment** (if Adanos data is provided)
+   - Does algorithmic sentiment across Reddit, X/Twitter, and Polymarket confirm or contradict the thesis?
+   - High buzz + rising trend + positive sentiment across platforms = stronger conviction
+   - Divergent signals across platforms = extra scrutiny needed
+   - Prediction market data (Polymarket) reflects real-money bets — weigh accordingly
+
 # Selection Guidelines
 - Choose **1 to 3 stocks maximum**—only the most compelling opportunities
 - Prioritize stocks with **high confidence** AND strong research quality
@@ -73,15 +83,20 @@ When reviewing each recommendation, assess:
                 "reddit_post_url": rec.reddit_post_url
             })
 
-        return (
+        prompt = (
             f"# Stock Recommendations to Review\n\n"
             f"You have {len(recommendations)} stock recommendations from your research team.\n\n"
             f"## Candidates:\n"
             f"{json.dumps(items, indent=2, ensure_ascii=False)}\n\n"
+        )
+        if self.sentiment_context:
+            prompt += f"{self.sentiment_context}\n\n"
+        prompt += (
             f"## Your Decision\n"
             f"Based on your experience and the evaluation criteria, select the top 1-3 stocks you would invest in. "
             f"Remember: quality over quantity. Only pick stocks where you have genuine conviction."
         )
+        return prompt
 
     def act(self, recommendations: list[StockRecommendation]) -> StockRecommendationTickerList:
         agent_cls = self.__class__.__name__

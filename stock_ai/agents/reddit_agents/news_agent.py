@@ -5,8 +5,8 @@ import json
 
 
 class NewsAgent(RedditBaseAgent):
-    def __init__(self, open_ai_client: OpenAI):
-        super().__init__(open_ai_client)
+    def __init__(self, open_ai_client: OpenAI, sentiment_context: str = ""):
+        super().__init__(open_ai_client, sentiment_context=sentiment_context)
 
     @property
     def system_prompt(self) -> str:
@@ -17,6 +17,7 @@ class NewsAgent(RedditBaseAgent):
 
 # Information Gathering
 {self.WEB_SEARCH_TOOL_PROMPT}
+{self.ADANOS_SENTIMENT_PROMPT}
 - Parse the provided news articles and posts for relevant stock information.
 - Identify both directly mentioned and first-order related tickers (competitors, suppliers, customers, or partners).
 - Extract concrete catalysts such as earnings releases, guidance updates, product launches, M&A activity, regulatory actions, litigation, or significant macroeconomic developments.
@@ -50,7 +51,10 @@ class NewsAgent(RedditBaseAgent):
                 "post_url": p.url,
             })
 
-        return (
+        prompt = (
             "Here are some recent news posts gathered from Reddit. Analyze them and provide a list of high-conviction stock recommendations with clear reasons.\n\n"
             f"ITEMS:\n{json.dumps(items, ensure_ascii=False)}"
         )
+        if self.sentiment_context:
+            prompt += f"\n\n{self.sentiment_context}"
+        return prompt

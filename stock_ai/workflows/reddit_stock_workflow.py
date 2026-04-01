@@ -16,6 +16,52 @@ from stock_ai.workflows.common.common_step_fns import s_insert_run_metadata
 
 from dataclasses import asdict
 from sqlalchemy import text, bindparam
+import os
+
+# --- Adanos sentiment enrichment (optional) ---
+
+def _extract_tickers_from_posts(posts: list[RedditPost]) -> list[str]:
+    """Extract likely ticker symbols from post titles and content."""
+    from stock_ai.sentiment.enricher import extract_tickers_from_text
+    texts = [f"{post.title} {post.selftext}" for post in posts]
+    return extract_tickers_from_text(texts)
+
+
+def _get_sentiment_context(posts: list[RedditPost]) -> str:
+    """Build Adanos sentiment context from posts. Returns empty string if disabled."""
+    api_key = os.getenv("ADANOS_API_KEY", "")
+    if not api_key:
+        return ""
+    try:
+        from stock_ai.sentiment import AdanosClient, SentimentEnricher
+        tickers = _extract_tickers_from_posts(posts)
+        if not tickers:
+            return ""
+        client = AdanosClient(api_key=api_key)
+        enricher = SentimentEnricher(client)
+        context = enricher.build_context(tickers, days=7, trending_limit=10)
+        client.close()
+        return context
+    except Exception as e:
+        print(f"[AdanosSentiment] Failed to fetch sentiment data: {e}")
+        return ""
+
+
+def _get_picker_sentiment_context(tickers: list[str]) -> str:
+    """Build compact sentiment context for the stock picker."""
+    api_key = os.getenv("ADANOS_API_KEY", "")
+    if not api_key:
+        return ""
+    try:
+        from stock_ai.sentiment import AdanosClient, SentimentEnricher
+        client = AdanosClient(api_key=api_key)
+        enricher = SentimentEnricher(client)
+        context = enricher.build_picker_context(tickers, days=7)
+        client.close()
+        return context
+    except Exception as e:
+        print(f"[AdanosSentiment] Failed to fetch picker sentiment data: {e}")
+        return ""
 
 def s_scrape(persistence: SqlAlchemyPersistence, run_id: str) -> None:
     if idempotency_check(persistence, run_id, "reddit_posts"):
@@ -89,12 +135,15 @@ def _make_stock_step_fn(agent_type: str, agent:RedditBaseAgent, p: RedditPost) -
 def _generate_stock_agent_step_functions(agent_type: str, reddit_posts: list[RedditPost]) -> list[StepFn]:
     """ Generate step functions for each Reddit post for the given agent type. """
     openai = get_openai_client()
+    sentiment_context = _get_sentiment_context(reddit_posts)
+    if sentiment_context:
+        print(f"[AdanosSentiment] Enriching {agent_type} agents with cross-platform sentiment data")
     if agent_type == "News":
-        agent = NewsAgent(openai)
+        agent = NewsAgent(openai, sentiment_context=sentiment_context)
     elif agent_type == "DD":
-        agent = DDAgent(openai)
+        agent = DDAgent(openai, sentiment_context=sentiment_context)
     elif agent_type == "YOLO":
-        agent = YoloAgent(openai)
+        agent = YoloAgent(openai, sentiment_context=sentiment_context)
     step_fns = []
     for p in reddit_posts:
         step_fn = _make_stock_step_fn(agent_type, agent, p)
@@ -104,7 +153,11 @@ def _generate_stock_agent_step_functions(agent_type: str, reddit_posts: list[Red
 
 def _make_picker_step_fn(stock_recommendations: list[StockRecommendation]) -> list[StepFn]:
     openai = get_openai_client()
-    stock_picker_agent = StockPickerAgent(openai)
+    rec_tickers = list({r.ticker for r in stock_recommendations})
+    picker_sentiment = _get_picker_sentiment_context(rec_tickers)
+    if picker_sentiment:
+        print(f"[AdanosSentiment] Enriching StockPicker with sentiment for {rec_tickers}")
+    stock_picker_agent = StockPickerAgent(openai, sentiment_context=picker_sentiment)
     def step_fn(persistence: SqlAlchemyPersistence, run_id: str) -> None:
         final_recs = stock_picker_agent.act(stock_recommendations)
         tickers = final_recs.tickers

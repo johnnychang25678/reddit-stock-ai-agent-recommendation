@@ -5,8 +5,8 @@ from stock_ai.agents.reddit_agents.reddit_base_agent import RedditBaseAgent
 import json
 
 class DDAgent(RedditBaseAgent):
-    def __init__(self, open_ai_client: OpenAI):
-        super().__init__(open_ai_client)
+    def __init__(self, open_ai_client: OpenAI, sentiment_context: str = ""):
+        super().__init__(open_ai_client, sentiment_context=sentiment_context)
 
     @property
     def system_prompt(self) -> str:
@@ -17,6 +17,7 @@ class DDAgent(RedditBaseAgent):
 
 # Information Gathering
 {self.WEB_SEARCH_TOOL_PROMPT}
+{self.ADANOS_SENTIMENT_PROMPT}
 - Focus only on tickers explicitly mentioned in the DD posts.
 - Extract concrete evidence such as: earnings results, guidance updates, margins, TAM, valuation metrics (P/E, EV/EBITDA, FCF), balance-sheet health, management commentary, and regulatory or legal developments.
 - When conflicting evidence appears, favor the strongest and most recent primary sources.
@@ -49,7 +50,10 @@ class DDAgent(RedditBaseAgent):
                 "post_url": p.url,
             })
 
-        return (
+        prompt = (
             "Below are Reddit DD posts. Analyze them and provide a list of high-conviction stock recommendations with clear reasons.\n\n"
             f"ITEMS:\n{json.dumps(items, ensure_ascii=False)}"
         )
+        if self.sentiment_context:
+            prompt += f"\n\n{self.sentiment_context}"
+        return prompt

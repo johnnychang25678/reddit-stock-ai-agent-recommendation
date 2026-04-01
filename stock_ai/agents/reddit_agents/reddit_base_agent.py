@@ -16,10 +16,29 @@ If you can find numeric snapshot data, include it in your reasoning.
 If data is not available, continue with qualitative reasoning.
 """
 
-    STYLE_GUIDELINES_PROMPT: str = """# Style
+    ADANOS_SENTIMENT_PROMPT = """# Cross-Platform Sentiment Data
+You may receive quantitative sentiment data from the Adanos Sentiment API
+(https://api.adanos.org) covering Reddit (20+ subreddits), X/Twitter, and
+Polymarket prediction markets.
+
+When sentiment data is provided:
+- **Buzz score** (0-100): Overall attention level. >60 = high interest.
+- **Sentiment score** (-1 to +1): Algorithmic (VADER + RoBERTa), not vibes.
+- **Trend**: Rising/falling/stable vs. previous period.
+- Use these signals to **validate or challenge** claims in the posts.
+- If Adanos sentiment is bearish but the post is bullish, flag the divergence.
+- If cross-platform data confirms the thesis, note it as a supporting signal.
+- Do NOT let sentiment data override strong fundamental catalysts.
+"""
+
+    STYLE_GUIDELINES_PROMPT = """# Style
 - Limit each reason to two paragraphs.
 - If you pick a ticker that was indirectly mentioned (e.g., a supplier or competitor), clearly explain the linkage in the reason.
-- Explicitly specify the catalyst (e.g., “FDA approval of new product X” or “Q3 revenue beat and guidance raise”)."""
+- Explicitly specify the catalyst (e.g., "FDA approval of new product X" or "Q3 revenue beat and guidance raise")."""
+
+    def __init__(self, open_ai_client, sentiment_context: str = ""):
+        super().__init__(open_ai_client)
+        self.sentiment_context = sentiment_context
 
     def act(self, posts: list[RedditPost]) -> StockRecommendations:
         agent_cls_name = self.__class__.__name__
